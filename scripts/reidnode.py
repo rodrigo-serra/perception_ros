@@ -4,6 +4,7 @@ import rospy
 import rospkg
 import cv2
 import numpy as np
+import os
 
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
@@ -18,7 +19,11 @@ from scipy.spatial import ConvexHull
 
 class Reid:
     def __init__(self):
-        rospy.init_node('reid')
+        # Create the node
+        node_name = "reid"
+        rospy.init_node(node_name, anonymous=False)
+        rospy.loginfo("%s node created" % node_name)
+
         rospack = rospkg.RosPack()
 
         # Variable Initialization
@@ -30,9 +35,11 @@ class Reid:
         self.ctr = True
         self.detector = holisticDetector()
         self.cropOffset = 50
+        
         self.currentEvent = None
         self.runHolistic = True
         self.takePhoto = False
+        self.runAutomatic = False
 
         # Create arrays of known face encodings and their names
         self.known_face_encodings = []
@@ -44,7 +51,7 @@ class Reid:
         self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.imgCallback)
 
         # Subscribe to Event and perform accordingly (start, stop, restart, automatic or non-automatic modes, take photo)
-        self.event_sub = rospy.Subscriber("/reid/event", String, self.eventCallback)
+        self.event_sub = rospy.Subscriber("/reid/event_in", String, self.eventCallback)
 
         # Publish Detected Faces
         self.reid_pub = rospy.Publisher("/reid/results", String, queue_size=10)
@@ -52,11 +59,40 @@ class Reid:
     def run(self):
         while not rospy.is_shutdown():
             if self.currentEvent is not None:
-                rospy.logerr(str(self.currentEvent) == "take_photo")
-                if str(self.currentEvent) == "take_photo":
+                if self.currentEvent == "take_photo":
                     self.takePhoto = True
                     self.currentEvent = None
+                    rospy.logwarn("Taking photo to unknow person!")
 
+                if self.currentEvent == "enable_automatic":
+                    self.runAutomatic = True
+                    self.currentEvent = None
+                    rospy.logwarn("Enabling automatic mode!")
+
+                if self.currentEvent == "disable_automatic":
+                    self.runAutomatic = False
+                    self.currentEvent = None
+                    rospy.logwarn("Disabling automatic mode!")
+
+                if self.currentEvent == "reset":
+                    self.deleteAllImgs()
+                    self.img = None
+                    self.draw = True
+                    self.personCounter = 0
+                    self.ctr = True
+                    self.detector = holisticDetector()
+                    self.cropOffset = 50
+                    
+                    self.currentEvent = None
+                    self.runHolistic = True
+                    self.takePhoto = False
+                    self.runAutomatic = False
+
+                    # Create arrays of known face encodings and their names
+                    self.known_face_encodings = []
+                    self.known_face_names = []
+                    
+                    rospy.logwarn("Reseting!")
 
             if self.img is not None:
                 if self.ctr:
@@ -111,8 +147,7 @@ class Reid:
     def lookIntoDetectPeopleHolistic(self, face_locations, face_names):
         detectionResult = ''
         for (top, right, bottom, left), name in zip(face_locations, face_names):
-            if name == "Unknown" and self.takePhoto:
-                rospy.logwarn("Taking photo to unknow person!")
+            if (name == "Unknown" and self.takePhoto) or (name == "Unknown" and self.runAutomatic):
                 # Draw Mask
                 mask = np.zeros(self.img.shape[:2], dtype="uint8")
                 left -= self.cropOffset
@@ -139,6 +174,8 @@ class Reid:
                         self.known_face_encodings.append(faceEnconder[0])
                         self.known_face_names.append("H #" + str(self.personCounter))
                         self.personCounter += 1
+                        self.takePhoto = False
+                        rospy.logwarn("Photo saved and added to enconder!")
            
             
             detectionResult += name + '; '
@@ -149,7 +186,7 @@ class Reid:
     def lookIntoDetectPeople(self, face_locations, face_names):
         detectionResult = ''
         for (top, right, bottom, left), name in zip(face_locations, face_names):
-            if name == "Unknown" and self.takePhoto:
+            if (name == "Unknown" and self.takePhoto) or (name == "Unknown" and self.runAutomatic):
                 rospy.logwarn("Taking photo to unknow person!")
                 # Draw Mask
                 mask = np.zeros(self.img.shape[:2], dtype="uint8")
@@ -168,6 +205,8 @@ class Reid:
                     self.known_face_encodings.append(faceEnconder[0])
                     self.known_face_names.append("H #" + str(self.personCounter))
                     self.personCounter += 1
+                    self.takePhoto = False
+                    rospy.logwarn("Photo saved and added to enconder!")
             
             
             detectionResult += name + '; '
@@ -185,8 +224,15 @@ class Reid:
 
 
     def eventCallback(self, data):
-        rospy.logwarn("Got new event: " + str(data.data))
+        # rospy.logwarn("Got new event: " + str(data.data))
         self.currentEvent = data.data
+
+
+    def deleteAllImgs(self):
+        for file_name in os.listdir(self.directory):
+            file = self.directory + file_name
+            if os.path.isfile(file):
+                os.remove(file)
 
 
 
