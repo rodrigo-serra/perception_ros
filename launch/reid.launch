@@ -1,0 +1,10 @@
+<launch>
+
+  <!-- Launch Real Sense Node -->
+  <include file="$(find realsense2_camera)/launch/rs_camera.launch"/>
+
+  <!-- Launch Reid Node -->
+  <node name="reid" pkg="perception_tests" type="reidnode.py" output="log"></node>
+
+
+</launch>
