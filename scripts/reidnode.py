@@ -74,6 +74,18 @@ class Reid:
                     self.currentEvent = None
                     rospy.logwarn("Disabling automatic mode!")
 
+                if self.currentEvent == "stop":
+                    self.currentEvent = None
+                    self.img = None
+                    self.image_sub.unregister()
+                    cv2.destroyAllWindows()
+                    rospy.logwarn("Stopping detection!")
+
+                if self.currentEvent == "start":
+                    self.currentEvent = None
+                    self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.imgCallback)
+                    rospy.logwarn("Starting detection!")
+
                 if self.currentEvent == "reset":
                     self.deleteAllImgs()
                     self.img = None
@@ -172,13 +184,13 @@ class Reid:
                     faceEnconder = face_recognition.face_encodings(imageRGB)
                     if len(faceEnconder) > 0:
                         self.known_face_encodings.append(faceEnconder[0])
-                        self.known_face_names.append("H #" + str(self.personCounter))
+                        self.known_face_names.append("H" + str(self.personCounter))
                         self.personCounter += 1
                         self.takePhoto = False
                         rospy.logwarn("Photo saved and added to enconder!")
            
             
-            detectionResult += name + '; '
+            detectionResult += name + ';'
         
         return detectionResult
 
@@ -203,13 +215,13 @@ class Reid:
                 faceEnconder = face_recognition.face_encodings(imageRGB)
                 if len(faceEnconder) > 0:
                     self.known_face_encodings.append(faceEnconder[0])
-                    self.known_face_names.append("H #" + str(self.personCounter))
+                    self.known_face_names.append("H" + str(self.personCounter))
                     self.personCounter += 1
                     self.takePhoto = False
                     rospy.logwarn("Photo saved and added to enconder!")
             
             
-            detectionResult += name + '; '
+            detectionResult += name + ';'
         
         return detectionResult
 
