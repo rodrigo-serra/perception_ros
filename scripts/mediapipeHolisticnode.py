@@ -33,6 +33,11 @@ class MediapipeHolistic:
         self.img = None
         self.ctr = True
         self.detector = holisticDetector()
+
+        self.drawPose = True
+        self.drawFace = False
+        self.drawRightHand = False
+        self.drawLeftHand = False
         
         self.currentEvent = None
         
@@ -49,6 +54,9 @@ class MediapipeHolistic:
         
         # Publish Pose World Landmarks
         self.mp_poseWorldLandmarks_pub = rospy.Publisher("/mediapipe_holistic/pose_world_landmarks", MediapipePointInfoArray, queue_size=10)
+        
+        # Publish Img Pose Landmarks
+        self.mp_imgPoseLandmarks_pub = rospy.Publisher("/mediapipe_holistic/img_pose_landmarks", MediapipePointInfoArray, queue_size=10)
 
     def run(self):
         while not rospy.is_shutdown():
@@ -70,11 +78,12 @@ class MediapipeHolistic:
                     self.ctr = True
                     self.detector = holisticDetector()
                     self.currentEvent = None
+                    self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.imgCallback)
                     rospy.logwarn("Reseting!")
 
             if self.img is not None:
                 if self.ctr:
-                    self.img = self.detector.find(self.img, True, False, False, False)
+                    self.img = self.detector.find(self.img, self.drawPose, self.drawFace, self.drawRightHand, self.drawLeftHand)
                     
                     isFaceLandmarks = self.detector.getFaceLandmarks(self.img)
                     if isFaceLandmarks:
@@ -84,6 +93,10 @@ class MediapipeHolistic:
                     isPoseWorldLandmarks = self.detector.getPoseWorldLandmarks()
                     if isPoseWorldLandmarks:
                         self.publishPoseWorldCoordinates()
+
+                    isImgPoseLandmarks = self.detector.getPoseImgLandmarks(self.img)
+                    if isImgPoseLandmarks:
+                        self.publishPoseImgCoordinates()
 
 
                     self.ctr = False
@@ -155,6 +168,21 @@ class MediapipeHolistic:
             msgArr.append(msg)
 
         self.mp_poseWorldLandmarks_pub.publish(msgArr)
+
+    
+    def publishPoseImgCoordinates(self):
+        msgArr = []
+        for p in self.detector.imgPoseCoordinates:
+            msg = MediapipePointInfo()
+            msg.x = p.x
+            msg.y = p.y
+            msg.z = -1
+            msg.visibility = p.visibility
+            msgArr.append(msg)
+
+        self.mp_imgPoseLandmarks_pub.publish(msgArr)
+
+        
 
 # Main function
 if __name__ == '__main__':
