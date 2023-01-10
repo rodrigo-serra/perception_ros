@@ -71,6 +71,8 @@ class holisticDetector():
         if self.results.pose_world_landmarks:
             for id, lm in enumerate(self.results.pose_world_landmarks.landmark):
                 self.poseCoordinates.append(tridimensionalInfo(lm.x, lm.y, lm.z, lm.visibility))
+            return True
+        return False
 
 
     def getPoseImgLandmarks(self, img):
@@ -80,8 +82,8 @@ class holisticDetector():
             for id, lm in enumerate(self.results.pose_landmarks.landmark):
                 cx, cy = int(lm.x * w), int(lm.y * h)
                 self.imgPoseCoordinates.append(bidimensionalInfo(cx, cy, lm.visibility))
-                # cv2.circle(img, (cx, cy), 10, (255, 0, 0), cv2.FILLED)
-        return img
+            return True
+        return False
         
 
     def visibilityCheck(self, number):

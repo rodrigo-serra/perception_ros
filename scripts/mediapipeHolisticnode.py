@@ -44,8 +44,11 @@ class MediapipeHolistic:
         # Subscribe to Event and perform accordingly
         self.event_sub = rospy.Subscriber("/mediapipe_holistic/event_in", String, self.eventCallback)
 
-        # Publish Detected Faces
-        self.mp_holistic_pub = rospy.Publisher("/mediapipe_holistic/results", String, queue_size=10)
+        # Publish Face Landmarks
+        self.mp_faceLandmarks_pub = rospy.Publisher("/mediapipe_holistic/face_landmarks", MediapipePointInfoArray, queue_size=10)
+        
+        # Publish Pose World Landmarks
+        self.mp_poseWorldLandmarks_pub = rospy.Publisher("/mediapipe_holistic/pose_world_landmarks", MediapipePointInfoArray, queue_size=10)
 
     def run(self):
         while not rospy.is_shutdown():
@@ -72,14 +75,16 @@ class MediapipeHolistic:
             if self.img is not None:
                 if self.ctr:
                     self.img = self.detector.find(self.img, True, False, False, False)
+                    
                     isFaceLandmarks = self.detector.getFaceLandmarks(self.img)
-
                     if isFaceLandmarks:
-                        rospy.loginfo(str(type(self.detector.faceCoordinates)))
-                        self.mp_holistic_pub.publish('Face Landmarks!')
-                    else:
-                        rospy.loginfo("No face landmarks!")
-                        self.mp_holistic_pub.publish("No face landmarks")
+                        self.publishFaceCoordinates()
+
+                    
+                    isPoseWorldLandmarks = self.detector.getPoseWorldLandmarks()
+                    if isPoseWorldLandmarks:
+                        self.publishPoseWorldCoordinates()
+
 
                     self.ctr = False
                     
@@ -125,7 +130,31 @@ class MediapipeHolistic:
         # rospy.logwarn("Got new event: " + str(data.data))
         self.currentEvent = data.data
 
+    
+    def publishFaceCoordinates(self):
+        msgArr = []
+        for p in self.detector.faceCoordinates:
+            msg = MediapipePointInfo()
+            msg.x = p[0]
+            msg.y = p[1]
+            msg.z = -1
+            msg.visibility = -1
+            msgArr.append(msg)
 
+        self.mp_faceLandmarks_pub.publish(msgArr)
+
+    
+    def publishPoseWorldCoordinates(self):
+        msgArr = []
+        for p in self.detector.poseCoordinates:
+            msg = MediapipePointInfo()
+            msg.x = p.x
+            msg.y = p.y
+            msg.z = p.z
+            msg.visibility = p.visibility
+            msgArr.append(msg)
+
+        self.mp_poseWorldLandmarks_pub.publish(msgArr)
 
 # Main function
 if __name__ == '__main__':
