@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import os
 
-from std_msgs.msg import String
+from std_msgs.msg import String, Float32
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 from PIL import Image as imgPil
@@ -38,6 +38,7 @@ class MediapipeHolistic:
         self.drawFace = False
         self.drawRightHand = False
         self.drawLeftHand = False
+        self.getFaceBoundary = False
         
         self.currentEvent = None
         
@@ -57,6 +58,22 @@ class MediapipeHolistic:
         
         # Publish Img Pose Landmarks
         self.mp_imgPoseLandmarks_pub = rospy.Publisher("/mediapipe_holistic/img_pose_landmarks", MediapipePointInfoArray, queue_size=10)
+
+        # EXTRAS
+        # Publish Right Arm Length
+        self.mp_rightArmLength_pub = rospy.Publisher("/mediapipe_holistic/right_arm_length", Float32, queue_size=10)
+        
+        # Publish Left Arm Length
+        self.mp_leftArmLength_pub = rospy.Publisher("/mediapipe_holistic/left_arm_length", Float32, queue_size=10)
+        
+        # Publish Shoulder Length
+        self.mp_shoulderLength_pub = rospy.Publisher("/mediapipe_holistic/shoulder_length", Float32, queue_size=10)
+
+        # Publish Hip Length
+        self.mp_hipLength_pub = rospy.Publisher("/mediapipe_holistic/hip_length", Float32, queue_size=10)
+
+        # Publish Torso Length
+        self.mp_torsoLength_pub = rospy.Publisher("/mediapipe_holistic/torso_length", Float32, queue_size=10)
 
     def run(self):
         while not rospy.is_shutdown():
@@ -88,15 +105,38 @@ class MediapipeHolistic:
                     isFaceLandmarks = self.detector.getFaceLandmarks(self.img)
                     if isFaceLandmarks:
                         self.publishFaceCoordinates()
+                        if self.getFaceBoundary:
+                            self.img = self.getFaceMask()
 
-                    
+
                     isPoseWorldLandmarks = self.detector.getPoseWorldLandmarks()
                     if isPoseWorldLandmarks:
                         self.publishPoseWorldCoordinates()
 
+
                     isImgPoseLandmarks = self.detector.getPoseImgLandmarks(self.img)
                     if isImgPoseLandmarks:
                         self.publishPoseImgCoordinates()
+
+
+                    if self.detector.getRightArmLength():
+                        self.mp_rightArmLength_pub.publish(self.detector.getRightArmLength())
+
+                    
+                    if self.detector.getLeftArmLength():
+                        self.mp_leftArmLength_pub.publish(self.detector.getLeftArmLength())
+
+                    
+                    if self.detector.getShoulderLength():
+                        self.mp_shoulderLength_pub.publish(self.detector.getShoulderLength())
+
+                    
+                    if self.detector.getHipLength():
+                        self.mp_hipLength_pub.publish(self.detector.getHipLength())
+
+
+                    if self.detector.getTorsoLength():
+                        self.mp_torsoLength_pub.publish(self.detector.getTorsoLength())
 
 
                     self.ctr = False
@@ -112,8 +152,8 @@ class MediapipeHolistic:
         rospy.loginfo('Shutting Down MediapipeHolistic Node')
 
 
-    def getFaceMask(self, img):
-        height, width, c = img.shape
+    def getFaceMask(self):
+        height, width, c = self.img.shape
         mask_img = imgPil.new('L', (width, height), 0)
 
         points = np.array(self.detector.faceCoordinates)
@@ -126,7 +166,7 @@ class MediapipeHolistic:
         ImageDraw.Draw(mask_img).polygon(polygon, outline=1, fill=1)
         mask = np.array(mask_img)
         
-        color_image = cv2.bitwise_and(img, img, mask=mask)
+        color_image = cv2.bitwise_and(self.img, self.img, mask=mask)
 
         return color_image
 

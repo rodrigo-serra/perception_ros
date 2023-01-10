@@ -157,3 +157,52 @@ class holisticDetector():
         else:
             return -1
 
+    
+    def getRightArmLength(self):
+        rightArmLength = self.getArmLenght(12, 14, 16)
+        if rightArmLength != -1:
+            return rightArmLength
+        else:
+            return False
+
+
+    def getLeftArmLength(self):
+        leftArmLength = self.getArmLenght(11, 13, 15)
+        if leftArmLength != -1:
+            return leftArmLength
+        else:
+            return False
+
+
+    def getShoulderLength(self):
+        shoulderLength = self.distanceBetweenPoints(11, 12)
+        if shoulderLength != -1:
+            return shoulderLength
+        else:
+            return False
+    
+
+    def getHipLength(self):
+        hipLength = self.distanceBetweenPoints(23, 24)
+        if hipLength != -1:
+            return hipLength
+        else:
+            return False
+
+    
+    def getTorsoLength(self):
+        middlePoint_1 = self.getMiddlePoint(11, 12)
+        middlePoint_2 = self.getMiddlePoint(23, 24)
+
+        if middlePoint_1 != -1 and middlePoint_2 != -1:
+            torsoLen = self.distanceFormula(
+                middlePoint_1[0],
+                middlePoint_1[1],
+                middlePoint_1[2],
+                middlePoint_2[0],
+                middlePoint_2[1],
+                middlePoint_2[2],
+            )
+            return torsoLen
+        else:
+            return False

@@ -100,6 +100,8 @@ class Reid:
                     self.takePhoto = False
                     self.runAutomatic = False
 
+                    self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.imgCallback)
+
                     # Create arrays of known face encodings and their names
                     self.known_face_encodings = []
                     self.known_face_names = []
