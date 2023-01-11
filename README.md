@@ -2,6 +2,5 @@
 
 ## Dependecies
 ```bash
-pip3 install mediapipe
-pip3 install face_recognition
+pip3 install -r requirements.txt --upgrade
 ```
