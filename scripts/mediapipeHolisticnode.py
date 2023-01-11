@@ -48,32 +48,32 @@ class MediapipeHolistic:
         self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.imgCallback)
 
         # Subscribe to Event and perform accordingly
-        self.event_sub = rospy.Subscriber("/mediapipe_holistic/event_in", String, self.eventCallback)
+        self.event_sub = rospy.Subscriber("~event_in", String, self.eventCallback)
 
         # Publish Face Landmarks
-        self.mp_faceLandmarks_pub = rospy.Publisher("/mediapipe_holistic/face_landmarks", MediapipePointInfoArray, queue_size=10)
+        self.mp_faceLandmarks_pub = rospy.Publisher("~face_landmarks", MediapipePointInfoArray, queue_size=10)
         
         # Publish Pose World Landmarks
-        self.mp_poseWorldLandmarks_pub = rospy.Publisher("/mediapipe_holistic/pose_world_landmarks", MediapipePointInfoArray, queue_size=10)
+        self.mp_poseWorldLandmarks_pub = rospy.Publisher("~pose_world_landmarks", MediapipePointInfoArray, queue_size=10)
         
         # Publish Img Pose Landmarks
-        self.mp_imgPoseLandmarks_pub = rospy.Publisher("/mediapipe_holistic/img_pose_landmarks", MediapipePointInfoArray, queue_size=10)
+        self.mp_imgPoseLandmarks_pub = rospy.Publisher("~img_pose_landmarks", MediapipePointInfoArray, queue_size=10)
 
         # EXTRAS
         # Publish Right Arm Length
-        self.mp_rightArmLength_pub = rospy.Publisher("/mediapipe_holistic/right_arm_length", Float32, queue_size=10)
+        self.mp_rightArmLength_pub = rospy.Publisher("~right_arm_length", Float32, queue_size=10)
         
         # Publish Left Arm Length
-        self.mp_leftArmLength_pub = rospy.Publisher("/mediapipe_holistic/left_arm_length", Float32, queue_size=10)
+        self.mp_leftArmLength_pub = rospy.Publisher("~left_arm_length", Float32, queue_size=10)
         
         # Publish Shoulder Length
-        self.mp_shoulderLength_pub = rospy.Publisher("/mediapipe_holistic/shoulder_length", Float32, queue_size=10)
+        self.mp_shoulderLength_pub = rospy.Publisher("~shoulder_length", Float32, queue_size=10)
 
         # Publish Hip Length
-        self.mp_hipLength_pub = rospy.Publisher("/mediapipe_holistic/hip_length", Float32, queue_size=10)
+        self.mp_hipLength_pub = rospy.Publisher("~hip_length", Float32, queue_size=10)
 
         # Publish Torso Length
-        self.mp_torsoLength_pub = rospy.Publisher("/mediapipe_holistic/torso_length", Float32, queue_size=10)
+        self.mp_torsoLength_pub = rospy.Publisher("~torso_length", Float32, queue_size=10)
 
     def run(self):
         while not rospy.is_shutdown():

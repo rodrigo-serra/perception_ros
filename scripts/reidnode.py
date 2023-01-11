@@ -51,10 +51,10 @@ class Reid:
         self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.imgCallback)
 
         # Subscribe to Event and perform accordingly (start, stop, restart, automatic or non-automatic modes, take photo)
-        self.event_sub = rospy.Subscriber("/reid/event_in", String, self.eventCallback)
+        self.event_sub = rospy.Subscriber("~event_in", String, self.eventCallback)
 
         # Publish Detected Faces
-        self.reid_pub = rospy.Publisher("/reid/results", String, queue_size=10)
+        self.reid_pub = rospy.Publisher("~results", String, queue_size=10)
 
     def run(self):
         while not rospy.is_shutdown():

@@ -1,0 +1,10 @@
+<launch>
+
+  <!-- Launch Real Sense Node -->
+  <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch"/> -->
+
+  <!-- Launch Mediapipe Holistic Node -->
+  <node ns="perception" name="mediapipe_holistic" pkg="perception_tests" type="mediapipeHolisticnode.py" output="log"></node>
+
+
+</launch>
