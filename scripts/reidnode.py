@@ -48,8 +48,11 @@ class Reid:
         
         self.bridge = CvBridge()
 
+        # Read from ROS Param
+        self.camera_topic = rospy.get_param("~camera_topic")
+
         # Subscribe to Camera Topic
-        self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.imgCallback)
+        self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
 
         # Subscribe to Event and perform accordingly (start, stop, restart, automatic or non-automatic modes, take photo)
         self.event_sub = rospy.Subscriber("~event_in", String, self.eventCallback)
@@ -66,29 +69,29 @@ class Reid:
                 if self.currentEvent == "take_photo":
                     self.takePhoto = True
                     self.currentEvent = None
-                    rospy.logwarn("Taking photo to unknow person!")
+                    rospy.loginfo("Taking photo to unknow person!")
 
                 if self.currentEvent == "enable_automatic":
                     self.runAutomatic = True
                     self.currentEvent = None
-                    rospy.logwarn("Enabling automatic mode!")
+                    rospy.loginfo("Enabling automatic mode!")
 
                 if self.currentEvent == "disable_automatic":
                     self.runAutomatic = False
                     self.currentEvent = None
-                    rospy.logwarn("Disabling automatic mode!")
+                    rospy.loginfo("Disabling automatic mode!")
 
                 if self.currentEvent == "stop":
                     self.currentEvent = None
                     self.img = None
                     self.image_sub.unregister()
                     cv2.destroyAllWindows()
-                    rospy.logwarn("Stopping detection!")
+                    rospy.loginfo("Stopping detection!")
 
                 if self.currentEvent == "start":
                     self.currentEvent = None
-                    self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.imgCallback)
-                    rospy.logwarn("Starting detection!")
+                    self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
+                    rospy.loginfo("Starting detection!")
 
                 if self.currentEvent == "reset":
                     self.deleteAllImgs()
@@ -104,13 +107,13 @@ class Reid:
                     self.takePhoto = False
                     self.runAutomatic = False
 
-                    self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.imgCallback)
+                    self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
 
                     # Create arrays of known face encodings and their names
                     self.known_face_encodings = []
                     self.known_face_names = []
                     
-                    rospy.logwarn("Reseting!")
+                    rospy.loginfo("Reseting!")
 
             if self.img is not None:
                 if self.ctr:
@@ -195,7 +198,7 @@ class Reid:
                         self.known_face_names.append("H" + str(self.personCounter))
                         self.personCounter += 1
                         self.takePhoto = False
-                        rospy.logwarn("Photo saved and added to enconder!")
+                        rospy.loginfo("Photo saved and added to enconder!")
            
             
             detectionResult.append(name)
@@ -207,7 +210,7 @@ class Reid:
         detectionResult = []
         for (top, right, bottom, left), name in zip(face_locations, face_names):
             if (name == "Unknown" and self.takePhoto) or (name == "Unknown" and self.runAutomatic):
-                rospy.logwarn("Taking photo to unknow person!")
+                rospy.loginfo("Taking photo to unknow person!")
                 # Draw Mask
                 mask = np.zeros(self.img.shape[:2], dtype="uint8")
                 cv2.rectangle(mask, (left, top), (right, bottom), 255, -1)
@@ -226,7 +229,7 @@ class Reid:
                     self.known_face_names.append("H" + str(self.personCounter))
                     self.personCounter += 1
                     self.takePhoto = False
-                    rospy.logwarn("Photo saved and added to enconder!")
+                    rospy.loginfo("Photo saved and added to enconder!")
             
             
             detectionResult.append(name)
@@ -244,7 +247,7 @@ class Reid:
 
 
     def eventCallback(self, data):
-        # rospy.logwarn("Got new event: " + str(data.data))
+        # rospy.loginfo("Got new event: " + str(data.data))
         self.currentEvent = data.data
 
 

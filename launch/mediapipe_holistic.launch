@@ -1,10 +1,15 @@
 <launch>
 
+  <!-- Camera topic (Real Sense) -->
+  <arg name="camera_topic" default="/camera/color/image_raw" />
+
   <!-- Launch Real Sense Node -->
   <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch"/> -->
 
   <!-- Launch Mediapipe Holistic Node -->
-  <node ns="perception" name="mediapipe_holistic" pkg="perception_tests" type="mediapipeHolisticnode.py" output="log"></node>
+  <node ns="perception" name="mediapipe_holistic" pkg="perception_tests" type="mediapipeHolisticnode.py" output="log">
+    <param name="camera_topic" value="$(arg camera_topic)" type="string"/>
+  </node>
 
 
 </launch>

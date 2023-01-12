@@ -44,8 +44,11 @@ class MediapipeHolistic:
         
         self.bridge = CvBridge()
 
+        # Read from ROS Param
+        self.camera_topic = rospy.get_param("~camera_topic")
+
         # Subscribe to Camera Topic
-        self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.imgCallback)
+        self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
 
         # Subscribe to Event and perform accordingly
         self.event_sub = rospy.Subscriber("~event_in", String, self.eventCallback)
@@ -83,20 +86,20 @@ class MediapipeHolistic:
                     self.img = None
                     self.image_sub.unregister()
                     cv2.destroyAllWindows()
-                    rospy.logwarn("Stopping detection!")
+                    rospy.loginfo("Stopping detection!")
 
                 if self.currentEvent == "start":
                     self.currentEvent = None
-                    self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.imgCallback)
-                    rospy.logwarn("Starting detection!")
+                    self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
+                    rospy.loginfo("Starting detection!")
 
                 if self.currentEvent == "reset":
                     self.img = None
                     self.ctr = True
                     self.detector = holisticDetector()
                     self.currentEvent = None
-                    self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.imgCallback)
-                    rospy.logwarn("Reseting!")
+                    self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
+                    rospy.loginfo("Reseting!")
 
             if self.img is not None:
                 if self.ctr:
@@ -180,7 +183,7 @@ class MediapipeHolistic:
 
 
     def eventCallback(self, data):
-        # rospy.logwarn("Got new event: " + str(data.data))
+        # rospy.loginfo("Got new event: " + str(data.data))
         self.currentEvent = data.data
 
     
