@@ -8,6 +8,7 @@ import os
 
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
+from perception_tests.msg import StringArray
 from cv_bridge import CvBridge, CvBridgeError
 from PIL import Image as imgPil
 from facerecModule import *
@@ -54,7 +55,10 @@ class Reid:
         self.event_sub = rospy.Subscriber("~event_in", String, self.eventCallback)
 
         # Publish Detected Faces
-        self.reid_pub = rospy.Publisher("~results", String, queue_size=10)
+        self.reid_pub = rospy.Publisher("~current_detection", StringArray, queue_size=10)
+
+        # Publish Record of Detected Faces
+        self.reidRecord_pub = rospy.Publisher("~detection_record", StringArray, queue_size=10)
 
     def run(self):
         while not rospy.is_shutdown():
@@ -118,12 +122,14 @@ class Reid:
                         else:
                             res = self.lookIntoDetectPeople(face_locations, face_names)
 
-                        rospy.loginfo(res)
+                        # rospy.loginfo(res)
                         self.reid_pub.publish(res)
                     else:
                         rospy.loginfo("No detections!")
-                        self.reid_pub.publish("No detections")
 
+                    if self.known_face_names != []:
+                        self.reidRecord_pub.publish(self.known_face_names)
+                    
                     self.ctr = False
                     
                 if self.draw:
@@ -159,7 +165,7 @@ class Reid:
 
 
     def lookIntoDetectPeopleHolistic(self, face_locations, face_names):
-        detectionResult = ''
+        detectionResult = []
         for (top, right, bottom, left), name in zip(face_locations, face_names):
             if (name == "Unknown" and self.takePhoto) or (name == "Unknown" and self.runAutomatic):
                 # Draw Mask
@@ -192,13 +198,13 @@ class Reid:
                         rospy.logwarn("Photo saved and added to enconder!")
            
             
-            detectionResult += name + ';'
+            detectionResult.append(name)
         
         return detectionResult
 
 
     def lookIntoDetectPeople(self, face_locations, face_names):
-        detectionResult = ''
+        detectionResult = []
         for (top, right, bottom, left), name in zip(face_locations, face_names):
             if (name == "Unknown" and self.takePhoto) or (name == "Unknown" and self.runAutomatic):
                 rospy.logwarn("Taking photo to unknow person!")
@@ -223,7 +229,7 @@ class Reid:
                     rospy.logwarn("Photo saved and added to enconder!")
             
             
-            detectionResult += name + ';'
+            detectionResult.append(name)
         
         return detectionResult
 

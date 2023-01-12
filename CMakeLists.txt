@@ -53,6 +53,7 @@ add_message_files(
   FILES
   MediapipePointInfo.msg
   MediapipePointInfoArray.msg
+  StringArray.msg
 )
 
 ## Generate services in the 'srv' folder
