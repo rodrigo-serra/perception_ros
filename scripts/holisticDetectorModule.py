@@ -2,19 +2,6 @@ import cv2
 import mediapipe as mp
 import math
 
-class signature():
-    def __init__(self, keypoints, descriptors):
-        self.keypoints = keypoints
-        self.descriptors = descriptors
-
-
-class person():
-    def __init__(self, id, keypoints, descriptors):
-        self.id = id
-        self.face_sign = signature(keypoints, descriptors)
-        self.seen = 10
-
-
 class tridimensionalInfo():
     def __init__(self, x, y, z, visibility):
         self.x = x
@@ -84,17 +71,41 @@ class holisticDetector():
                 self.imgPoseCoordinates.append(bidimensionalInfo(cx, cy, lm.visibility))
             return True
         return False
-        
+
+
+    def getRightHandLandmarks(self, img):
+        self.rightHandCoordinates = []
+        h, w, c = img.shape
+        if self.results.right_hand_landmarks:
+            for id, lm in enumerate(self.results.right_hand_landmarks.landmark):
+                cx, cy = int(lm.x * w), int(lm.y * h)
+                self.rightHandCoordinates.append((cx, cy))
+            return True
+        return False
+
+
+    def getLeftHandLandmarks(self, img):
+        self.leftHandCoordinates = []
+        h, w, c = img.shape
+        if self.results.left_hand_landmarks:
+            for id, lm in enumerate(self.results.left_hand_landmarks.landmark):
+                cx, cy = int(lm.x * w), int(lm.y * h)
+                self.leftHandCoordinates.append((cx, cy))
+            return True
+        return False
+
 
     def visibilityCheck(self, number):
         if self.poseCoordinates != []:
             return self.poseCoordinates[number].visibility >= 0.98
         return False
 
+
     def imgVisibilityCheck(self, number):
         if self.imgPoseCoordinates != []:
             return self.imgPoseCoordinates[number].visibility >= 0.98
         return False
+
 
     def printPointCoordinates(self, number):
         if self.visibilityCheck(number):
@@ -105,6 +116,7 @@ class holisticDetector():
         else:
             print("Visibility of point " + str(number) + " is too low")
 
+
     def printImgPointCoordinates(self, number):
         if self.imgVisibilityCheck(number):
             print("ID :" + str(number))
@@ -112,6 +124,7 @@ class holisticDetector():
             print("v: " + str(self.imgPoseCoordinates[number].y))
         else:
             print("Visibility of point " + str(number) + " is too low")
+
 
     def returnImgPointCoordinates(self, number):
         if self.imgVisibilityCheck(number):
@@ -159,7 +172,9 @@ class holisticDetector():
 
     
     def getRightArmLength(self):
-        rightArmLength = self.getArmLenght(12, 14, 16)
+        rightArmLength = self.getArmLenght(self.mpHolistic.PoseLandmark.RIGHT_SHOULDER, 
+                                            self.mpHolistic.PoseLandmark.RIGHT_ELBOW, 
+                                            self.mpHolistic.PoseLandmark.RIGHT_WRIST)
         if rightArmLength != -1:
             return rightArmLength
         else:
@@ -167,7 +182,9 @@ class holisticDetector():
 
 
     def getLeftArmLength(self):
-        leftArmLength = self.getArmLenght(11, 13, 15)
+        leftArmLength = self.getArmLenght(self.mpHolistic.PoseLandmark.LEFT_SHOULDER, 
+                                            self.mpHolistic.PoseLandmark.LEFT_ELBOW, 
+                                            self.mpHolistic.PoseLandmark.LEFT_WRIST)
         if leftArmLength != -1:
             return leftArmLength
         else:
@@ -175,7 +192,8 @@ class holisticDetector():
 
 
     def getShoulderLength(self):
-        shoulderLength = self.distanceBetweenPoints(11, 12)
+        shoulderLength = self.distanceBetweenPoints(self.mpHolistic.PoseLandmark.LEFT_SHOULDER, 
+                                                    self.mpHolistic.PoseLandmark.RIGHT_SHOULDER)
         if shoulderLength != -1:
             return shoulderLength
         else:
@@ -183,7 +201,8 @@ class holisticDetector():
     
 
     def getHipLength(self):
-        hipLength = self.distanceBetweenPoints(23, 24)
+        hipLength = self.distanceBetweenPoints(self.mpHolistic.PoseLandmark.LEFT_HIP, 
+                                                self.mpHolistic.PoseLandmark.RIGHT_HIP)
         if hipLength != -1:
             return hipLength
         else:
@@ -191,8 +210,8 @@ class holisticDetector():
 
     
     def getTorsoLength(self):
-        middlePoint_1 = self.getMiddlePoint(11, 12)
-        middlePoint_2 = self.getMiddlePoint(23, 24)
+        middlePoint_1 = self.getMiddlePoint(self.mpHolistic.PoseLandmark.LEFT_SHOULDER, self.mpHolistic.PoseLandmark.RIGHT_SHOULDER)
+        middlePoint_2 = self.getMiddlePoint(self.mpHolistic.PoseLandmark.LEFT_HIP, self.mpHolistic.PoseLandmark.RIGHT_HIP)
 
         if middlePoint_1 != -1 and middlePoint_2 != -1:
             torsoLen = self.distanceFormula(
@@ -206,3 +225,32 @@ class holisticDetector():
             return torsoLen
         else:
             return False
+
+
+    def getPointingDirection(self, img):
+        if self.rightHandCoordinates != []:
+            x1 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.WRIST].x
+            y1 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.WRIST].y
+
+            x2 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP].x
+            y2 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP].y
+
+            print("x1: " + str(x1))
+            print("y1: " + str(y1))
+            print("x2: " + str(x2))
+            print("y2: " + str(y2))
+
+            h, w, c = img.shape
+            
+            if x2 != x1:
+                m = (y2 - y1) / (x2 - x1)
+                b = y1 - m * x1
+                px, qx = 0, w
+                py, qy = m * px + b, m * qx + b
+            else:
+                px, py = x1, 0
+                qx, qy = x1, h
+
+            cv2.line(img, (int(px), int(py)), (int(qx), int(qy)), (0, 255, 0), 2)
+
+        return img

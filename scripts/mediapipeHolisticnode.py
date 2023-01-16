@@ -36,8 +36,8 @@ class MediapipeHolistic:
 
         self.drawPose = True
         self.drawFace = False
-        self.drawRightHand = False
-        self.drawLeftHand = False
+        self.drawRightHand = True
+        self.drawLeftHand = True
         self.getFaceBoundary = False
         
         self.currentEvent = None
@@ -61,6 +61,13 @@ class MediapipeHolistic:
         
         # Publish Img Pose Landmarks
         self.mp_imgPoseLandmarks_pub = rospy.Publisher("~img_pose_landmarks", MediapipePointInfoArray, queue_size=10)
+
+        # Publish Right Hand Landmarks
+        self.mp_rightHandLandmarks_pub = rospy.Publisher("~right_hand_landmarks", MediapipePointInfoArray, queue_size=10)
+
+        # Publish Left Hand Landmarks
+        self.mp_leftHandLandmarks_pub = rospy.Publisher("~left_hand_landmarks", MediapipePointInfoArray, queue_size=10)
+
 
         # EXTRAS
         # Publish Right Arm Length
@@ -120,6 +127,17 @@ class MediapipeHolistic:
                     isImgPoseLandmarks = self.detector.getPoseImgLandmarks(self.img)
                     if isImgPoseLandmarks:
                         self.publishPoseImgCoordinates()
+
+
+                    isRightHandLandmarks = self.detector.getRightHandLandmarks(self.img)
+                    if isRightHandLandmarks:
+                        self.publishRightHandCoordinates()
+                        self.getPointingDirection()
+                        
+                    
+                    isLeftHandLandmarks = self.detector.getLeftHandLandmarks(self.img)
+                    if isLeftHandLandmarks:
+                        self.publishLeftHandCoordinates()
 
 
                     if self.detector.getRightArmLength():
@@ -224,6 +242,32 @@ class MediapipeHolistic:
             msgArr.append(msg)
 
         self.mp_imgPoseLandmarks_pub.publish(msgArr)
+
+
+    def publishRightHandCoordinates(self):
+        msgArr = []
+        for p in self.detector.rightHandCoordinates:
+            msg = MediapipePointInfo()
+            msg.x = p[0]
+            msg.y = p[1]
+            msg.z = -1
+            msg.visibility = -1
+            msgArr.append(msg)
+
+        self.mp_rightHandLandmarks_pub.publish(msgArr)
+
+
+    def publishLeftHandCoordinates(self):
+        msgArr = []
+        for p in self.detector.leftHandCoordinates:
+            msg = MediapipePointInfo()
+            msg.x = p[0]
+            msg.y = p[1]
+            msg.z = -1
+            msg.visibility = -1
+            msgArr.append(msg)
+
+        self.mp_leftHandLandmarks_pub.publish(msgArr)
 
         
 
