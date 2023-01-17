@@ -227,7 +227,7 @@ class holisticDetector():
             return False
 
 
-    def getPointingDirectionRightHand(self, img, drawPoitingDirectionSlope = True):
+    def getPointingDirectionRightHand(self, img, drawPoitingDirectionSlope = False):
         if self.rightHandCoordinates != []:
             x1 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.WRIST][0]
             y1 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.WRIST][1]
@@ -242,6 +242,22 @@ class holisticDetector():
 
         return img, m, b
 
+    
+    def getPointingDirectionLeftHand(self, img, drawPoitingDirectionSlope = False):
+        if self.leftHandCoordinates != []:
+            x1 = self.leftHandCoordinates[self.mpHolistic.HandLandmark.WRIST][0]
+            y1 = self.leftHandCoordinates[self.mpHolistic.HandLandmark.WRIST][1]
+
+            x2 = self.leftHandCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP][0]
+            y2 = self.leftHandCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP][1]
+
+            m, b, px, py, qx, qy = self.slopePointingDirection(img, x1, y1, x2, y2)
+
+            if drawPoitingDirectionSlope:
+                cv2.line(img, (int(px), int(py)), (int(qx), int(qy)), (255, 255, 0), 2)
+
+        return img, m, b
+
 
     def slopePointingDirection(self, img, x1, y1, x2, y2):
         h, w, c = img.shape
@@ -252,8 +268,8 @@ class holisticDetector():
             px, qx = 0, w
             py, qy = m * px + b, m * qx + b
         else:
-            m = 0
-            b = 0
+            m = None
+            b = None
             px, py = x1, 0
             qx, qy = x1, h
 
