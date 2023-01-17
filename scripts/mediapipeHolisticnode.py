@@ -85,6 +85,12 @@ class MediapipeHolistic:
         # Publish Torso Length
         self.mp_torsoLength_pub = rospy.Publisher("~torso_length", Float32, queue_size=10)
 
+        # Publish Right Hand Poiting Direction - Slope
+        self.mp_pointingDirectionRightHand_slope_pub = rospy.Publisher("~right_hand_poiting_slope", Float32, queue_size=10)
+
+        # Publish Right Hand Poiting Direction - Intercept
+        self.mp_pointingDirectionRightHand_intercept_pub = rospy.Publisher("~right_hand_poiting_intercept", Float32, queue_size=10)
+
     def run(self):
         while not rospy.is_shutdown():
             if self.currentEvent is not None:
@@ -132,7 +138,9 @@ class MediapipeHolistic:
                     isRightHandLandmarks = self.detector.getRightHandLandmarks(self.img)
                     if isRightHandLandmarks:
                         self.publishRightHandCoordinates()
-                        self.getPointingDirection()
+                        self.img, rh_slope, rh_intercept = self.detector.getPointingDirectionRightHand(self.img)
+                        self.mp_pointingDirectionRightHand_slope_pub.publish(rh_slope)
+                        self.mp_pointingDirectionRightHand_intercept_pub.publish(rh_intercept)
                         
                     
                     isLeftHandLandmarks = self.detector.getLeftHandLandmarks(self.img)
@@ -268,6 +276,8 @@ class MediapipeHolistic:
             msgArr.append(msg)
 
         self.mp_leftHandLandmarks_pub.publish(msgArr)
+
+        
 
         
 

@@ -227,30 +227,35 @@ class holisticDetector():
             return False
 
 
-    def getPointingDirection(self, img):
+    def getPointingDirectionRightHand(self, img, drawPoitingDirectionSlope = True):
         if self.rightHandCoordinates != []:
-            x1 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.WRIST].x
-            y1 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.WRIST].y
+            x1 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.WRIST][0]
+            y1 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.WRIST][1]
 
-            x2 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP].x
-            y2 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP].y
+            x2 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP][0]
+            y2 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP][1]
 
-            print("x1: " + str(x1))
-            print("y1: " + str(y1))
-            print("x2: " + str(x2))
-            print("y2: " + str(y2))
+            m, b, px, py, qx, qy = self.slopePointingDirection(img, x1, y1, x2, y2)
 
-            h, w, c = img.shape
-            
-            if x2 != x1:
-                m = (y2 - y1) / (x2 - x1)
-                b = y1 - m * x1
-                px, qx = 0, w
-                py, qy = m * px + b, m * qx + b
-            else:
-                px, py = x1, 0
-                qx, qy = x1, h
+            if drawPoitingDirectionSlope:
+                cv2.line(img, (int(px), int(py)), (int(qx), int(qy)), (0, 255, 0), 2)
 
-            cv2.line(img, (int(px), int(py)), (int(qx), int(qy)), (0, 255, 0), 2)
+        return img, m, b
 
-        return img
+
+    def slopePointingDirection(self, img, x1, y1, x2, y2):
+        h, w, c = img.shape
+        
+        if x2 != x1:
+            m = (y2 - y1) / (x2 - x1)
+            b = y1 - m * x1
+            px, qx = 0, w
+            py, qy = m * px + b, m * qx + b
+        else:
+            m = 0
+            b = 0
+            px, py = x1, 0
+            qx, qy = x1, h
+
+
+        return m, b, px, py, qx, qy 
