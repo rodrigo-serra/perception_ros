@@ -7,7 +7,7 @@ import numpy as np
 import os
 
 from std_msgs.msg import String
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 from perception_tests.msg import StringArray
 from cv_bridge import CvBridge, CvBridgeError
 from PIL import Image as imgPil
@@ -50,9 +50,13 @@ class Reid:
 
         # Read from ROS Param
         self.camera_topic = rospy.get_param("~camera_topic")
+        self.readImgCompressed = rospy.get_param("~img_compressed")
 
         # Subscribe to Camera Topic
-        self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
+        if self.readImgCompressed:
+            self.image_sub = rospy.Subscriber(self.camera_topic, CompressedImage, self.imgCallback)
+        else:
+            self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
 
         # Subscribe to Event and perform accordingly (start, stop, restart, automatic or non-automatic modes, take photo)
         self.event_sub = rospy.Subscriber("~event_in", String, self.eventCallback)
@@ -90,7 +94,10 @@ class Reid:
 
                 if self.currentEvent == "start":
                     self.currentEvent = None
-                    self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
+                    if self.readImgCompressed:
+                        self.image_sub = rospy.Subscriber(self.camera_topic, CompressedImage, self.imgCallback)
+                    else:
+                        self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
                     rospy.loginfo("Starting detection!")
 
                 if self.currentEvent == "reset":
@@ -107,7 +114,10 @@ class Reid:
                     self.takePhoto = False
                     self.runAutomatic = False
 
-                    self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
+                    if self.readImgCompressed:
+                        self.image_sub = rospy.Subscriber(self.camera_topic, CompressedImage, self.imgCallback)
+                    else:
+                        self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
 
                     # Create arrays of known face encodings and their names
                     self.known_face_encodings = []
@@ -240,7 +250,11 @@ class Reid:
 
     def imgCallback(self, data):
         try:
-            self.img = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            if self.readImgCompressed:
+                self.img = self.bridge.compressed_imgmsg_to_cv2(data, "bgr8")
+            else:
+                self.img = self.bridge.imgmsg_to_cv2(data, "bgr8")
+                
             self.ctr = True
         except CvBridgeError as e:
             print(e)
