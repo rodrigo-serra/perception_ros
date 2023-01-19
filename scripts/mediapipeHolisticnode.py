@@ -89,14 +89,14 @@ class MediapipeHolistic:
         # Publish Torso Length
         self.mp_torsoLength_pub = rospy.Publisher("~torso_length", Float32, queue_size=10)
 
-        # Publish Right Hand Poiting Direction - Slope
-        self.mp_pointingDirectionRightHand_slope_pub = rospy.Publisher("~right_hand_pointing_slope", Float32, queue_size=10)
+        # Publish Hand Poiting Direction - Slope
+        self.mp_pointingDirectionHand_slope_pub = rospy.Publisher("~hand_pointing_slope", Float32, queue_size=10)
 
-        # Publish Right Hand Poiting Direction - Intercept
-        self.mp_pointingDirectionRightHand_intercept_pub = rospy.Publisher("~right_hand_pointing_intercept", Float32, queue_size=10)
+        # Publish Hand Poiting Direction - Intercept
+        self.mp_pointingDirectionHand_intercept_pub = rospy.Publisher("~hand_pointing_intercept", Float32, queue_size=10)
 
-        # Publish Right Hand Poiting Direction - Direction
-        self.mp_pointingDirectionRightHand_direction_pub = rospy.Publisher("~right_hand_pointing_direction", String, queue_size=10)
+        # Publish Hand Poiting Direction - Direction
+        self.mp_pointingDirectionHand_direction_pub = rospy.Publisher("~hand_pointing_direction", String, queue_size=10)
 
     def run(self):
         while not rospy.is_shutdown():
@@ -151,20 +151,24 @@ class MediapipeHolistic:
                     isRightHandLandmarks = self.detector.getRightHandLandmarks(self.img)
                     if isRightHandLandmarks:
                         self.publishRightHandCoordinates()
-                        self.img, rh_slope, rh_intercept = self.detector.getPointingDirectionRightHand(self.img)
-                        if rh_slope != None and rh_intercept != None:
-                            self.mp_pointingDirectionRightHand_slope_pub.publish(rh_slope)
-                            self.mp_pointingDirectionRightHand_intercept_pub.publish(rh_intercept)
-                            if rh_slope > 0:
-                                self.mp_pointingDirectionRightHand_direction_pub.publish("left")
-                            else:
-                                self.mp_pointingDirectionRightHand_direction_pub.publish("right")
+                        
                     
                     isLeftHandLandmarks = self.detector.getLeftHandLandmarks(self.img)
                     if isLeftHandLandmarks:
                         self.publishLeftHandCoordinates()
-                        self.img, lh_slope, lh_intercept = self.detector.getPointingDirectionLeftHand(self.img)
 
+                    
+                    isPointingHand = self.detector.getPointingArm()
+                    if isPointingHand:
+                        self.img, h_slope, h_intercept = self.detector.getPointingDirectionHand(self.img, isPointingHand)
+                        if h_slope != None and h_intercept != None:
+                            self.mp_pointingDirectionHand_slope_pub.publish(h_slope)
+                            self.mp_pointingDirectionHand_intercept_pub.publish(h_intercept)
+                            # if h_slope > 0:
+                            #     self.mp_pointingDirectionHand_direction_pub.publish("left")
+                            # else:
+                            #     self.mp_pointingDirectionHand_direction_pub.publish("right")
+                        
 
                     if self.detector.getRightArmLength():
                         self.mp_rightArmLength_pub.publish(self.detector.getRightArmLength())

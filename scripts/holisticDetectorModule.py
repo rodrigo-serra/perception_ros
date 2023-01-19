@@ -21,6 +21,10 @@ class holisticDetector():
         self.mpDraw = mp.solutions.drawing_utils
         self.mpHolistic = mp.solutions.holistic
         self.holistic = self.mpHolistic.Holistic()
+        self.visibilityThreshold = 0.9
+        self.handDistanceToBodyThreshold = 0.25
+        self.rightHandReturnMsg = "Right Hand"
+        self.leftHandReturnMsg = "Left Hand"
 
     def find(self, img, pose, face, rightHand, leftHand):
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -97,13 +101,13 @@ class holisticDetector():
 
     def visibilityCheck(self, number):
         if self.poseCoordinates != []:
-            return self.poseCoordinates[number].visibility >= 0.98
+            return self.poseCoordinates[number].visibility >= self.visibilityThreshold
         return False
 
 
     def imgVisibilityCheck(self, number):
         if self.imgPoseCoordinates != []:
-            return self.imgPoseCoordinates[number].visibility >= 0.98
+            return self.imgPoseCoordinates[number].visibility >= self.visibilityThreshold
         return False
 
 
@@ -151,6 +155,7 @@ class holisticDetector():
         dz = math.pow(z1 - z2, 2)
         return math.sqrt(dx + dy + dz)
 
+
     def getMiddlePoint(self, num1, num2):
         if self.visibilityCheck(num1) and self.visibilityCheck(num2):
             x = (self.poseCoordinates[num1].x + self.poseCoordinates[num2].x) / 2
@@ -172,9 +177,7 @@ class holisticDetector():
 
     
     def getRightArmLength(self):
-        rightArmLength = self.getArmLenght(self.mpHolistic.PoseLandmark.RIGHT_SHOULDER, 
-                                            self.mpHolistic.PoseLandmark.RIGHT_ELBOW, 
-                                            self.mpHolistic.PoseLandmark.RIGHT_WRIST)
+        rightArmLength = self.getArmLenght(self.mpHolistic.PoseLandmark.RIGHT_SHOULDER, self.mpHolistic.PoseLandmark.RIGHT_ELBOW, self.mpHolistic.PoseLandmark.RIGHT_WRIST)
         if rightArmLength != -1:
             return rightArmLength
         else:
@@ -182,9 +185,7 @@ class holisticDetector():
 
 
     def getLeftArmLength(self):
-        leftArmLength = self.getArmLenght(self.mpHolistic.PoseLandmark.LEFT_SHOULDER, 
-                                            self.mpHolistic.PoseLandmark.LEFT_ELBOW, 
-                                            self.mpHolistic.PoseLandmark.LEFT_WRIST)
+        leftArmLength = self.getArmLenght(self.mpHolistic.PoseLandmark.LEFT_SHOULDER, self.mpHolistic.PoseLandmark.LEFT_ELBOW, self.mpHolistic.PoseLandmark.LEFT_WRIST)
         if leftArmLength != -1:
             return leftArmLength
         else:
@@ -192,8 +193,7 @@ class holisticDetector():
 
 
     def getShoulderLength(self):
-        shoulderLength = self.distanceBetweenPoints(self.mpHolistic.PoseLandmark.LEFT_SHOULDER, 
-                                                    self.mpHolistic.PoseLandmark.RIGHT_SHOULDER)
+        shoulderLength = self.distanceBetweenPoints(self.mpHolistic.PoseLandmark.LEFT_SHOULDER, self.mpHolistic.PoseLandmark.RIGHT_SHOULDER)
         if shoulderLength != -1:
             return shoulderLength
         else:
@@ -201,8 +201,7 @@ class holisticDetector():
     
 
     def getHipLength(self):
-        hipLength = self.distanceBetweenPoints(self.mpHolistic.PoseLandmark.LEFT_HIP, 
-                                                self.mpHolistic.PoseLandmark.RIGHT_HIP)
+        hipLength = self.distanceBetweenPoints(self.mpHolistic.PoseLandmark.LEFT_HIP, self.mpHolistic.PoseLandmark.RIGHT_HIP)
         if hipLength != -1:
             return hipLength
         else:
@@ -227,34 +226,54 @@ class holisticDetector():
             return False
 
 
-    def getPointingDirectionRightHand(self, img, drawPoitingDirectionSlope = False):
-        if self.rightHandCoordinates != []:
-            x1 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.WRIST][0]
-            y1 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.WRIST][1]
+    def getPointingArm(self):
+        rightHandDistanceToBody = self.distanceBetweenPoints(self.mpHolistic.PoseLandmark.RIGHT_HIP, self.mpHolistic.PoseLandmark.RIGHT_WRIST)
+        leftHandDistanceToBody = self.distanceBetweenPoints(self.mpHolistic.PoseLandmark.LEFT_HIP,self.mpHolistic.PoseLandmark.LEFT_WRIST)
 
-            x2 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP][0]
-            y2 = self.rightHandCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP][1]
+        if rightHandDistanceToBody == -1 and leftHandDistanceToBody == -1:
+            return False
 
-            m, b, px, py, qx, qy = self.slopePointingDirection(img, x1, y1, x2, y2)
+        if rightHandDistanceToBody > leftHandDistanceToBody and rightHandDistanceToBody > self.handDistanceToBodyThreshold:
+            print("Right Hand Distance: " + str(rightHandDistanceToBody))
+            return self.rightHandReturnMsg
 
-            if drawPoitingDirectionSlope:
+        if rightHandDistanceToBody < leftHandDistanceToBody and leftHandDistanceToBody > self.handDistanceToBodyThreshold:
+            print("Left Hand Distance: " + str(leftHandDistanceToBody))
+            return self.leftHandReturnMsg
+        
+        return False
+
+
+    def getPointingDirectionHand(self, img, whichHand, drawPoitingDirectionSlope = True):
+        handCoordinates = []
+        m, b = None, None
+
+        if whichHand == self.rightHandReturnMsg and self.rightHandCoordinates != []:
+            handCoordinates = self.rightHandCoordinates
+        elif whichHand == self.leftHandReturnMsg and self.leftHandCoordinates != []:
+            handCoordinates = self.leftHandCoordinates
+        else:
+            return img, m, b
+
+        # x1 = handCoordinates[self.mpHolistic.HandLandmark.WRIST][0]
+        # y1 = handCoordinates[self.mpHolistic.HandLandmark.WRIST][1]
+
+        x1 = handCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_MCP][0]
+        y1 = handCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_MCP][1]
+
+        # x1 = handCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_PIP][0]
+        # y1 = handCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_PIP][1]
+
+        # x1 = self.imgPoseCoordinates[self.mpHolistic.PoseLandmark.RIGHT_SHOULDER].x
+        # y1 = self.imgPoseCoordinates[self.mpHolistic.PoseLandmark.RIGHT_SHOULDER].y
+
+        x2 = handCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP][0]
+        y2 = handCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP][1]
+
+        m, b, px, py, qx, qy = self.slopePointingDirection(img, x1, y1, x2, y2)
+
+        if drawPoitingDirectionSlope:
                 cv2.line(img, (int(px), int(py)), (int(qx), int(qy)), (0, 255, 0), 2)
-
-        return img, m, b
-
-    
-    def getPointingDirectionLeftHand(self, img, drawPoitingDirectionSlope = False):
-        if self.leftHandCoordinates != []:
-            x1 = self.leftHandCoordinates[self.mpHolistic.HandLandmark.WRIST][0]
-            y1 = self.leftHandCoordinates[self.mpHolistic.HandLandmark.WRIST][1]
-
-            x2 = self.leftHandCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP][0]
-            y2 = self.leftHandCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP][1]
-
-            m, b, px, py, qx, qy = self.slopePointingDirection(img, x1, y1, x2, y2)
-
-            if drawPoitingDirectionSlope:
-                cv2.line(img, (int(px), int(py)), (int(qx), int(qy)), (255, 255, 0), 2)
 
         return img, m, b
 

@@ -2,14 +2,14 @@
 
   <!-- Camera topic (Real Sense) -->
   <!-- <arg name="camera_topic" default="/camera/color/image_raw" /> -->
-  <arg name="camera_topic" default="/camera/color/image_raw/compressed" />
+  <!-- <arg name="camera_topic" default="/camera/color/image_raw/compressed" /> -->
   <!-- <arg name="camera_topic" default="/xtion/rgb/image_raw/compressed" /> -->
-  <!-- <arg name="camera_topic" default="/object_detector/detection_image/compressed" /> -->
+  <arg name="camera_topic" default="/object_detector/detection_image/compressed" />
   
   <arg name="img_compressed" default="true" />
 
   <!-- Launch Real Sense Node -->
-  <include file="$(find realsense2_camera)/launch/rs_camera.launch"/>
+  <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch"/> -->
 
   <!-- Launch Mediapipe Holistic Node -->
   <node ns="perception" name="mediapipe_holistic" pkg="perception_tests" type="mediapipeHolisticnode.py" output="screen">
