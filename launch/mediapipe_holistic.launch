@@ -8,6 +8,9 @@
   
   <arg name="img_compressed" default="true" />
 
+  <!-- Use Hands to Determine Pointing Direction -->
+  <arg name="pointing_hands" default="false" />
+
   <!-- Launch Real Sense Node -->
   <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch"/> -->
 
@@ -15,6 +18,7 @@
   <node ns="perception" name="mediapipe_holistic" pkg="perception_tests" type="mediapipeHolisticnode.py" output="screen">
     <param name="camera_topic" value="$(arg camera_topic)" type="string"/>
     <param name="img_compressed" value="$(arg img_compressed)" type="bool"/>
+    <param name="pointing_hands" value="$(arg pointing_hands)" type="bool"/>
   </node>
 
 

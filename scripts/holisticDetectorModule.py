@@ -234,14 +234,37 @@ class holisticDetector():
             return False
 
         if rightHandDistanceToBody > leftHandDistanceToBody and rightHandDistanceToBody > self.handDistanceToBodyThreshold:
-            print("Right Hand Distance: " + str(rightHandDistanceToBody))
+            # print("Right Hand Distance: " + str(rightHandDistanceToBody))
             return self.rightHandReturnMsg
 
         if rightHandDistanceToBody < leftHandDistanceToBody and leftHandDistanceToBody > self.handDistanceToBodyThreshold:
-            print("Left Hand Distance: " + str(leftHandDistanceToBody))
+            # print("Left Hand Distance: " + str(leftHandDistanceToBody))
             return self.leftHandReturnMsg
         
         return False
+
+    
+    def getPointingDirectionArm(self, img, whichHand, drawPoitingDirectionSlope = True):
+        m, b = None, None
+        if whichHand == self.rightHandReturnMsg and self.imgPoseCoordinates != []:
+            x1 = self.imgPoseCoordinates[self.mpHolistic.PoseLandmark.RIGHT_ELBOW].x
+            y1 = self.imgPoseCoordinates[self.mpHolistic.PoseLandmark.RIGHT_ELBOW].y
+            x2 = self.imgPoseCoordinates[self.mpHolistic.PoseLandmark.RIGHT_WRIST].x
+            y2 = self.imgPoseCoordinates[self.mpHolistic.PoseLandmark.RIGHT_WRIST].y
+        elif whichHand == self.leftHandReturnMsg and self.imgPoseCoordinates != []:
+            x1 = self.imgPoseCoordinates[self.mpHolistic.PoseLandmark.LEFT_ELBOW].x
+            y1 = self.imgPoseCoordinates[self.mpHolistic.PoseLandmark.LEFT_ELBOW].y
+            x2 = self.imgPoseCoordinates[self.mpHolistic.PoseLandmark.LEFT_WRIST].x
+            y2 = self.imgPoseCoordinates[self.mpHolistic.PoseLandmark.LEFT_WRIST].y
+        else:
+            return img, m, b
+
+        m, b, px, py, qx, qy = self.slopePointingDirection(img, x1, y1, x2, y2)
+
+        if drawPoitingDirectionSlope:
+                cv2.line(img, (int(px), int(py)), (int(qx), int(qy)), (0, 255, 0), 2)
+
+        return img, m, b
 
 
     def getPointingDirectionHand(self, img, whichHand, drawPoitingDirectionSlope = True):

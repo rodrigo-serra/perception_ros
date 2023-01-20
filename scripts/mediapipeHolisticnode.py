@@ -34,6 +34,8 @@ class MediapipeHolistic:
         self.ctr = True
         self.detector = holisticDetector()
 
+        self.showImg = True
+
         self.drawPose = True
         self.drawFace = False
         self.drawRightHand = True
@@ -47,6 +49,7 @@ class MediapipeHolistic:
         # Read from ROS Param
         self.camera_topic = rospy.get_param("~camera_topic")
         self.readImgCompressed = rospy.get_param("~img_compressed")
+        self.usePointingHands = rospy.get_param("~pointing_hands")
 
         # Subscribe to Camera Topic
         if self.readImgCompressed:
@@ -160,14 +163,18 @@ class MediapipeHolistic:
                     
                     isPointingHand = self.detector.getPointingArm()
                     if isPointingHand:
-                        self.img, h_slope, h_intercept = self.detector.getPointingDirectionHand(self.img, isPointingHand)
+                        if self.usePointingHands:
+                            self.img, h_slope, h_intercept = self.detector.getPointingDirectionHand(self.img, isPointingHand)
+                        else:
+                            self.img, h_slope, h_intercept = self.detector.getPointingDirectionArm(self.img, isPointingHand)
+
                         if h_slope != None and h_intercept != None:
                             self.mp_pointingDirectionHand_slope_pub.publish(h_slope)
                             self.mp_pointingDirectionHand_intercept_pub.publish(h_intercept)
-                            # if h_slope > 0:
-                            #     self.mp_pointingDirectionHand_direction_pub.publish("left")
-                            # else:
-                            #     self.mp_pointingDirectionHand_direction_pub.publish("right")
+                            if h_slope > 0:
+                                self.mp_pointingDirectionHand_direction_pub.publish(isPointingHand + " Pointing Left")
+                            else:
+                                self.mp_pointingDirectionHand_direction_pub.publish(isPointingHand + " Pointing Right")
                         
 
                     if self.detector.getRightArmLength():
@@ -192,9 +199,10 @@ class MediapipeHolistic:
 
                     self.ctr = False
                     
-              
-                cv2.imshow("RealSense", self.img)
-                cv2.waitKey(1)                    
+
+                if self.showImg:
+                    cv2.imshow("RealSense", self.img)
+                    cv2.waitKey(1)                    
             
             self.rate.sleep()
 
