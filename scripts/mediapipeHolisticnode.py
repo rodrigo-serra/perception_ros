@@ -172,9 +172,11 @@ class MediapipeHolistic:
                             self.mp_pointingDirectionHand_slope_pub.publish(h_slope)
                             self.mp_pointingDirectionHand_intercept_pub.publish(h_intercept)
                             if h_slope > 0:
-                                self.mp_pointingDirectionHand_direction_pub.publish(isPointingHand + " Pointing Left")
+                                # self.mp_pointingDirectionHand_direction_pub.publish(isPointingHand + " Pointing Left")
+                                self.mp_pointingDirectionHand_direction_pub.publish("left")
                             else:
-                                self.mp_pointingDirectionHand_direction_pub.publish(isPointingHand + " Pointing Right")
+                                # self.mp_pointingDirectionHand_direction_pub.publish(isPointingHand + " Pointing Right")
+                                self.mp_pointingDirectionHand_direction_pub.publish("right")
                         
 
                     if self.detector.getRightArmLength():
