@@ -9,6 +9,7 @@ from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
 from darknet_ros_py.msg import RecognizedObjectArrayStamped
 
+from shapely.geometry import Polygon, LineString
 
 
 class Perception:
@@ -18,8 +19,11 @@ class Perception:
         self.detectedObjects = []
         self.filteredObjects = []
         self.readObj = False
-        self.readImg = False
         self.pointingDirection = None
+        self.pointingSlope = None
+        self.pointingIntercept = None
+
+        self.easyDetection = False
 
         self.classNameToBeDetected = "backpack"
 
@@ -28,11 +32,15 @@ class Perception:
 
         self.bridge = CvBridge()
 
-        # Read from ROS Param
+        # Topics
         self.camera_topic = "/object_detector/detection_image/compressed"
         self.readImgCompressed = True
+
         self.detectedObjects_topic = "/object_detector/detections"
+        
         self.pointingDirection_topic = "/perception/mediapipe_holistic/hand_pointing_direction"
+        self.pointingSlope_topic = "/perception/mediapipe_holistic/hand_pointing_slope"
+        self.pointingIntercept_topic = "/perception/mediapipe_holistic/hand_pointing_intercept"
 
         # Subscribe to Camera Topic
         if self.readImgCompressed:
@@ -45,15 +53,40 @@ class Perception:
 
         self.pointingDirection_sub = rospy.Subscriber(self.pointingDirection_topic, String, self.getPointingDirection)
 
+        self.pointingSlope_sub = rospy.Subscriber(self.pointingSlope_topic, Float32, self.getPointingSlope)
+
+        self.pointingIntercept_sub = rospy.Subscriber(self.pointingIntercept_topic, Float32, self.getPointingIntercept)
+
     
     def run(self):
-        while(not self.readObj and not self.readImg):
+        while(not self.readObj):
             rospy.loginfo("Waiting for Object Detection...")
 
-        if self.filterObjectList():
-            rospy.loginfo(self.filteredObjects)
+
+        if self.easyDetection:
+            while(self.pointingDirection is None):
+                rospy.loginfo("Getting pointing direction...")
+
+
+
+            pointingObject = self.findObjectSimplifiedVersion()
+            rospy.loginfo(pointingObject)
+        
         else:
-            rospy.loginfo("No objects were detected with the follwing class: " + self.classNameToBeDetected)
+            if not self.filterObjectList():
+                rospy.loginfo("No objects were detected with the follwing class: " + self.classNameToBeDetected)
+            
+            while(self.img is None):
+                rospy.loginfo("Getting img...")
+
+            while(self.pointingSlope is None and self.pointingIntercept is None):
+                rospy.loginfo("Getting pointing slope and intercept...")
+
+
+            self.lineIntersectionPolygon()
+
+
+
 
 
     def imgCallback(self, data):
@@ -63,7 +96,6 @@ class Perception:
             else:
                 self.img = self.bridge.imgmsg_to_cv2(data, "bgr8")
 
-            self.readImg = True
 
         except CvBridgeError as e:
             print(e)
@@ -71,6 +103,14 @@ class Perception:
 
     def getPointingDirection(self, data):
         self.pointingDirection = data.data
+
+    
+    def getPointingSlope(self, data):
+        self.pointingSlope = data.data
+
+    
+    def getPointingIntercept(self, data):
+        self.pointingIntercept = data.data
 
 
     def readDetectedObjects(self, data):
@@ -89,13 +129,59 @@ class Perception:
         return False
 
     
-    # def findObjectSimplifiedVersion(self):
-    #     if self.pointingDirection != None:
-    #         if self.pointingDirection == self.pointingLeftMsg:
-    #             h, w, c = self.img.shape
-    #             for obj in self.filteredObjects:
-    #                 if obj.bounding_box.x_offset:
+    def findObjectSimplifiedVersion(self):
+        if self.pointingDirection != None:
+            if self.pointingDirection == self.pointingLeftMsg:
+                for idx, obj in enumerate(self.filteredObjects):
+                    if idx == 0:
+                        left_obj = obj
 
+                    if obj.bounding_box.x_offset > left_obj.bounding_box.x_offset:
+                        left_obj = obj
+
+                return left_obj
+
+            
+            if self.pointingDirection == self.pointingRightMsg:
+                for idx, obj in enumerate(self.filteredObjects):
+                    if idx == 0:
+                        right_obj = obj
+
+                    if obj.bounding_box.x_offset < right_obj.bounding_box.x_offset:
+                        right_obj = obj
+
+                return right_obj
+
+        return None
+
+
+    def lineIntersectionPolygon(self):
+        if self.pointingSlope != None and self.pointingIntercept != None:
+            h, w, c = self.img.shape
+            x1, x2 = 0, w
+            y1, y2 = self.pointingIntercept * x1 + self.pointingIntercept, self.pointingSlope * x2 + self.pointingIntercept
+            line1 = LineString([(y1, x1), (y2, x2)])
+
+            for obj in self.filteredObjects:
+                rospy.loginfo("HERE!")
+                x_top_left = obj.bounding_box.x_offset
+                y_top_left = obj.bounding_box.y_offset
+
+                x_bottom_left = obj.bounding_box.x_offset
+                y_bottom_left = obj.bounding_box.y_offset + obj.bounding_box.height
+
+                x_top_right = obj.bounding_box.x_offset + obj.bounding_box.width
+                y_top_right = obj.bounding_box.y_offset
+
+                x_bottom_right = obj.bounding_box.x_offset + obj.bounding_box.width
+                y_bottom_right = obj.bounding_box.y_offset + obj.bounding_box.height
+        
+                polygon = Polygon([(x_top_left, y_top_left), (x_bottom_left, y_bottom_left), (x_top_right, y_top_right), (x_bottom_right, y_bottom_right)])
+
+                res = line1.intersects(polygon)
+                if res == True:
+                    rospy.logwarn(res)
+                    rospy.loginfo(obj)
 
 
 
