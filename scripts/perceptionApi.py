@@ -67,7 +67,8 @@ class Perception:
             while(self.pointingDirection is None):
                 rospy.loginfo("Getting pointing direction...")
 
-
+            # if not self.filterObjectList():
+            #     rospy.loginfo("No objects were detected with the follwing class: " + self.classNameToBeDetected)
 
             pointingObject = self.findObjectSimplifiedVersion()
             rospy.loginfo(pointingObject)
@@ -161,9 +162,8 @@ class Perception:
             x1, x2 = 0, w
             y1, y2 = self.pointingIntercept * x1 + self.pointingIntercept, self.pointingSlope * x2 + self.pointingIntercept
             line1 = LineString([(y1, x1), (y2, x2)])
-
+    
             for obj in self.filteredObjects:
-                rospy.loginfo("HERE!")
                 x_top_left = obj.bounding_box.x_offset
                 y_top_left = obj.bounding_box.y_offset
 
@@ -176,9 +176,15 @@ class Perception:
                 x_bottom_right = obj.bounding_box.x_offset + obj.bounding_box.width
                 y_bottom_right = obj.bounding_box.y_offset + obj.bounding_box.height
         
-                polygon = Polygon([(x_top_left, y_top_left), (x_bottom_left, y_bottom_left), (x_top_right, y_top_right), (x_bottom_right, y_bottom_right)])
+                polygon = Polygon([(x_bottom_left, y_bottom_left), (x_bottom_right, y_bottom_right), (x_top_right, y_top_right), (x_top_left, y_top_left), (x_bottom_left, y_bottom_left)])
+
+                rospy.logwarn("Bottom Left: " + str(x_bottom_left) + " " + str(y_bottom_left))
+                rospy.logwarn("Bottom Right: " + str(x_bottom_right) + " " + str(y_bottom_right))
+                rospy.logwarn("Top Right: " + str(x_top_right) + " " + str(y_top_right))
+                rospy.logwarn("Top Left: " + str(x_top_left) + " " + str(y_top_left))
 
                 res = line1.intersects(polygon)
+                rospy.logerr(str(res))
                 if res == True:
                     rospy.logwarn(res)
                     rospy.loginfo(obj)
