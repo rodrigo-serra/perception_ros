@@ -22,15 +22,15 @@ class Perception:
         self.pointingDirection = None
         self.pointingSlope = None
         self.pointingIntercept = None
+        self.bridge = CvBridge()
 
         self.easyDetection = False
-
+        self.useFilteredObjects = True
         self.classNameToBeDetected = "backpack"
 
         self.pointingLeftMsg = "left"
         self.pointingRightMsg = "right"
 
-        self.bridge = CvBridge()
 
         # Topics
         self.camera_topic = "/object_detector/detection_image/compressed"
@@ -61,17 +61,20 @@ class Perception:
     def run(self):
         while(not self.readObj):
             rospy.loginfo("Waiting for Object Detection...")
+            # if rospy.is_shutdown():
+            #     return None
 
 
         if self.easyDetection:
             while(self.pointingDirection is None):
                 rospy.loginfo("Getting pointing direction...")
+                # if rospy.is_shutdown():
+                #     return None
 
             if not self.filterObjectList():
                 rospy.loginfo("No objects were detected with the follwing class: " + self.classNameToBeDetected)
 
-            pointingObject = self.findObjectSimplifiedVersion()
-            rospy.loginfo(pointingObject)
+            return  self.findObjectSimplifiedVersion()
         
         else:
             if not self.filterObjectList():
@@ -79,12 +82,16 @@ class Perception:
             
             while(self.img is None):
                 rospy.loginfo("Getting img...")
+                # if rospy.is_shutdown():
+                #     return None
 
             while(self.pointingSlope is None and self.pointingIntercept is None):
                 rospy.loginfo("Getting pointing slope and intercept...")
+                # if rospy.is_shutdown():
+                #     return None
 
 
-            self.lineIntersectionPolygon()
+            return self.lineIntersectionPolygon()
 
 
 
@@ -163,7 +170,12 @@ class Perception:
             y1, y2 = self.pointingIntercept * x1 + self.pointingIntercept, self.pointingSlope * x2 + self.pointingIntercept
             line = Line(Point(x1, y1), Point(x2, y2))
 
-            for obj in self.filteredObjects:
+            if self.useFilteredObjects:
+                arr = self.filteredObjects
+            else:
+                arr = self.detectedObjects
+
+            for obj in arr:
                 x_top_left = obj.bounding_box.x_offset
                 y_top_left = obj.bounding_box.y_offset
 
@@ -183,18 +195,26 @@ class Perception:
                 isIntersection = poly.intersection(line)
 
                 if isIntersection != []:
-                    rospy.logwarn("True")
-                    rospy.loginfo(obj)
+                    return obj
+
+        return None
 
 
 
 
-        
-
-# Main function
-if __name__ == '__main__':
+def main():
     node_name = "perception_action"
     rospy.init_node(node_name, anonymous=True)
     rospy.loginfo("%s node created" % node_name)
     n_percep = Perception()
-    n_percep.run()
+    obj = n_percep.run()
+    rospy.loginfo(obj)
+    return obj
+
+
+# Main function
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        rospy.loginfo("Node Interruption!")
