@@ -31,7 +31,6 @@ class Reid:
         self.directory = rospack.get_path('perception_tests') + '/images/'
         self.rate = rospy.Rate(10)
         self.img = None
-        self.draw = True
         self.personCounter = 0
         self.ctr = True
         self.detector = holisticDetector()
@@ -51,6 +50,7 @@ class Reid:
         # Read from ROS Param
         self.camera_topic = rospy.get_param("~camera_topic")
         self.readImgCompressed = rospy.get_param("~img_compressed")
+        self.draw = rospy.get_param("~visualization")
 
         # Subscribe to Camera Topic
         if self.readImgCompressed:
@@ -103,7 +103,6 @@ class Reid:
                 if self.currentEvent == "reset":
                     self.deleteAllImgs()
                     self.img = None
-                    self.draw = True
                     self.personCounter = 0
                     self.ctr = True
                     self.detector = holisticDetector()

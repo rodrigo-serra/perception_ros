@@ -12,8 +12,8 @@
   <!-- Use Hands to Determine Pointing Direction. Otherwise use Arms to determine pointing direction -->
   <arg name="pointing_hands" default="false" />
 
-  <!-- Object Detection Topic -->
-  <arg name="object_detection_topic" default="/object_detector/detections" />
+  <!-- Visualization -->
+  <arg name="visualization" default="true" />
 
   <!-- Launch Real Sense Node -->
   <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch"/> -->
@@ -21,9 +21,9 @@
   <!-- Launch Mediapipe Holistic Node -->
   <node ns="perception" name="mediapipe_holistic" pkg="perception_tests" type="mediapipeHolisticnode.py" output="screen">
     <param name="camera_topic" value="$(arg camera_topic)" type="string"/>
-    <param name="object_detection_topic" value="$(arg object_detection_topic)" type="string"/>
     <param name="img_compressed" value="$(arg img_compressed)" type="bool"/>
     <param name="pointing_hands" value="$(arg pointing_hands)" type="bool"/>
+    <param name="visualization" value="$(arg visualization)" type="bool"/>
   </node>
 
 

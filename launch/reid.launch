@@ -6,7 +6,11 @@
   <!-- <arg name="camera_topic" default="/xtion/rgb/image_raw/compressed" /> -->
   <!-- <arg name="camera_topic" default="/object_detector/detection_image/compressed" /> -->
 
+  <!-- Image Compressed or Not Compressed -->
   <arg name="img_compressed" default="true" />
+
+  <!-- Visualization -->
+  <arg name="visualization" default="true" />
   
   <!-- Launch Real Sense Node -->
   <include file="$(find realsense2_camera)/launch/rs_camera.launch"/>
@@ -15,6 +19,7 @@
   <node ns="perception" name="reid" pkg="perception_tests" type="reidnode.py" output="log">
     <param name="camera_topic" value="$(arg camera_topic)" type="string"/>
     <param name="img_compressed" value="$(arg img_compressed)" type="bool"/>
+    <param name="visualization" value="$(arg visualization)" type="bool"/>
   </node>
 
 

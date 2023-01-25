@@ -34,8 +34,6 @@ class MediapipeHolistic:
         self.ctr = True
         self.detector = holisticDetector()
 
-        self.showImg = True
-
         self.drawPose = True
         self.drawFace = False
         self.drawRightHand = True
@@ -50,6 +48,7 @@ class MediapipeHolistic:
         self.camera_topic = rospy.get_param("~camera_topic")
         self.readImgCompressed = rospy.get_param("~img_compressed")
         self.usePointingHands = rospy.get_param("~pointing_hands")
+        self.showImg = rospy.get_param("~visualization")
 
         # Subscribe to Camera Topic
         if self.readImgCompressed:

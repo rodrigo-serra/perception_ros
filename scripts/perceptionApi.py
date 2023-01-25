@@ -3,6 +3,7 @@
 import rospy
 import cv2
 import numpy as np
+import signal
 
 from std_msgs.msg import String, Float32
 from sensor_msgs.msg import Image, CompressedImage
@@ -61,15 +62,11 @@ class Perception:
     def run(self):
         while(not self.readObj):
             rospy.loginfo("Waiting for Object Detection...")
-            # if rospy.is_shutdown():
-            #     return None
 
 
         if self.easyDetection:
             while(self.pointingDirection is None):
                 rospy.loginfo("Getting pointing direction...")
-                # if rospy.is_shutdown():
-                #     return None
 
             if not self.filterObjectList():
                 rospy.loginfo("No objects were detected with the follwing class: " + self.classNameToBeDetected)
@@ -82,13 +79,9 @@ class Perception:
             
             while(self.img is None):
                 rospy.loginfo("Getting img...")
-                # if rospy.is_shutdown():
-                #     return None
 
             while(self.pointingSlope is None and self.pointingIntercept is None):
                 rospy.loginfo("Getting pointing slope and intercept...")
-                # if rospy.is_shutdown():
-                #     return None
 
 
             return self.lineIntersectionPolygon()
@@ -201,8 +194,12 @@ class Perception:
 
 
 
+def handler(signum, frame):
+    exit(1)
+
 
 def main():
+    signal.signal(signal.SIGINT, handler)
     node_name = "perception_action"
     rospy.init_node(node_name, anonymous=True)
     rospy.loginfo("%s node created" % node_name)
@@ -214,7 +211,4 @@ def main():
 
 # Main function
 if __name__ == '__main__':
-    try:
-        main()
-    except rospy.ROSInterruptException:
-        rospy.loginfo("Node Interruption!")
+    main()
