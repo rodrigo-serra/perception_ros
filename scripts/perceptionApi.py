@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import signal
 import sys
+import math
 
 from std_msgs.msg import String, Float32
 from sensor_msgs.msg import Image, CompressedImage
@@ -106,10 +107,11 @@ class Perception:
             while(self.pointingSlope is None and self.pointingIntercept is None):
                 rospy.loginfo("Getting pointing slope and intercept...")
 
-
-            return self.lineIntersectionPolygon()
-
-
+            res = self.lineIntersectionPolygon()
+            if res != None:
+                return res
+            else:
+                return self.findClosestObjectToLine()
 
 
 
@@ -227,10 +229,13 @@ class Perception:
 
 
     def findClosestObjectToLine(self):
+        returnObject = None
+        returnDist = None
+        
         if self.pointingSlope != None and self.pointingIntercept != None:
             perpendicularLineSlope = -1 / self.pointingSlope
 
-            for obj in self.detectedObjects:
+            for idx, obj in enumerate(self.detectedObjects):
                 # Find Bounding Box Center
                 obj_boundingBoxCenter_x = obj.bounding_box.x_offset + obj.bounding_box.width / 2
                 obj_boundingBoxCenter_y = obj.bounding_box.y_offset + obj.bounding_box.height / 2
@@ -239,9 +244,23 @@ class Perception:
                 perpendicularLineIntercept = obj_boundingBoxCenter_y - perpendicularLineSlope * obj_boundingBoxCenter_x
 
                 # Find Intersection (Point)
+                inter_x = (perpendicularLineIntercept - self.pointingIntercept) / (self.pointingSlope - perpendicularLineSlope)
+                inter_y = self.pointingSlope * inter_x + self.pointingIntercept
 
-                # Compute Distance between those two points (intersection and boundinx box center)
+                # Compute Distance between those two points (intersection and bounding box center)
+                dx = math.pow(obj_boundingBoxCenter_x - inter_x, 2)
+                dy = math.pow(obj_boundingBoxCenter_y - inter_y, 2)
+                dist = math.sqrt(dx + dy)
+                
+                if idx == 0:
+                    returnObject = obj
+                    returnDist = dist
+                
+                if idx > 0 and returnDist > dist:
+                    returnObject = obj
+                    returnDist = dist
 
+        return returnObject
 
 
 
