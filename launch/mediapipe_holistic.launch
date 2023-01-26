@@ -1,13 +1,18 @@
 <launch>
 
   <!-- Camera topic (Real Sense) -->
-  <!-- <arg name="camera_topic" default="/camera/color/image_raw" /> -->
+  <!-- <arg name="camera_topic" default="/camera/color/image_raw" />
+  <arg name="img_compressed" default="false" /> -->
+
   <!-- <arg name="camera_topic" default="/camera/color/image_raw/compressed" /> -->
+   <!-- <arg name="img_compressed" default="true" /> -->
+
   <!-- <arg name="camera_topic" default="/xtion/rgb/image_raw/compressed" /> -->
+  <!-- <arg name="img_compressed" default="true" /> -->
+
   <arg name="camera_topic" default="/object_detector/detection_image/compressed" />
-  
-  <!-- Image Compressed or Not Compressed -->
   <arg name="img_compressed" default="true" />
+
 
   <!-- Use Hands to Determine Pointing Direction. Otherwise use Arms to determine pointing direction -->
   <arg name="pointing_hands" default="false" />
