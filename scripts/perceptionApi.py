@@ -4,44 +4,63 @@ import rospy
 import cv2
 import numpy as np
 import signal
+import sys
 
 from std_msgs.msg import String, Float32
 from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
 from darknet_ros_py.msg import RecognizedObjectArrayStamped
-
+from detectron2_ros.msg import Result
 from sympy import Point, Polygon, Line
 
 
 class Perception:
-    def __init__(self):
+    def __init__(self, useYolo):
         # Variable Initialization
         self.img = None
-        self.detectedObjects = []
-        self.filteredObjects = []
         self.readObj = False
         self.pointingDirection = None
         self.pointingSlope = None
         self.pointingIntercept = None
         self.bridge = CvBridge()
+        self.useYolo = useYolo
 
+        # YOLO Variables
+        self.detectedObjects = []
+        self.filteredObjects = []
+
+        # Detectron Variables
+        self.detectron_boxes = []
+        self.detectron_class_ids = []
+        self.detectron_class_names = []
+        self.detectron_scores = []
+        self.detectron_masks = []
+
+        #
         self.easyDetection = False
         self.useFilteredObjects = True
         self.classNameToBeDetected = "backpack"
 
+        # Msgs are defined in the mediapipeHolisticnode
         self.pointingLeftMsg = "left"
         self.pointingRightMsg = "right"
 
 
         # Topics
-        self.camera_topic = "/object_detector/detection_image/compressed"
-        self.readImgCompressed = True
+        if self.useYolo == True:
+            self.camera_topic = "/object_detector/detection_image/compressed"
+            self.readImgCompressed = True
+            self.detectedObjects_topic = "/object_detector/detections"
+        else:
+            self.camera_topic = "/camera/color/image_raw"
+            self.readImgCompressed = False
+            self.detectedObjects_topic = "/detectron2_ros/result"
 
-        self.detectedObjects_topic = "/object_detector/detections"
-        
+
         self.pointingDirection_topic = "/perception/mediapipe_holistic/hand_pointing_direction"
         self.pointingSlope_topic = "/perception/mediapipe_holistic/hand_pointing_slope"
         self.pointingIntercept_topic = "/perception/mediapipe_holistic/hand_pointing_intercept"
+
 
         # Subscribe to Camera Topic
         if self.readImgCompressed:
@@ -50,7 +69,11 @@ class Perception:
             self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
 
         
-        self.objDetection_sub = rospy.Subscriber(self.detectedObjects_topic, RecognizedObjectArrayStamped, self.readDetectedObjects)
+        if self.useYolo == True:
+            self.objDetection_sub = rospy.Subscriber(self.detectedObjects_topic, RecognizedObjectArrayStamped, self.readDetectedObjects)
+        else:
+            self.objDetection_sub = rospy.Subscriber(self.detectedObjects_topic, Result, self.readDetectedObjectsDetectron)
+
 
         self.pointingDirection_sub = rospy.Subscriber(self.pointingDirection_topic, String, self.getPointingDirection)
 
@@ -63,20 +86,20 @@ class Perception:
         while(not self.readObj):
             rospy.loginfo("Waiting for Object Detection...")
 
+        if self.detectedObjects == []:
+            rospy.loginfo("No objects were detected!")
+
+        # rospy.loginfo(self.detectron_boxes)
+        # rospy.loginfo(self.detectedObjects)
+        # exit(1)
 
         if self.easyDetection:
             while(self.pointingDirection is None):
                 rospy.loginfo("Getting pointing direction...")
 
-            if not self.filterObjectList():
-                rospy.loginfo("No objects were detected with the follwing class: " + self.classNameToBeDetected)
-
             return  self.findObjectSimplifiedVersion()
         
         else:
-            if not self.filterObjectList():
-                rospy.loginfo("No objects were detected with the follwing class: " + self.classNameToBeDetected)
-            
             while(self.img is None):
                 rospy.loginfo("Getting img...")
 
@@ -115,25 +138,41 @@ class Perception:
 
 
     def readDetectedObjects(self, data):
-        for obj in data.objects.objects:
-            self.detectedObjects.append(obj)
+        if self.useFilteredObjects:
+            for obj in data.objects.objects:
+                if obj.class_name == self.classNameToBeDetected:
+                    self.detectedObjects.append(obj)
+        else:
+            for obj in data.objects.objects:    
+                self.detectedObjects.append(obj)
 
         self.readObj = True
 
-    
-    def filterObjectList(self):
-        if self.detectedObjects != []:
-            for obj in self.detectedObjects:
-                if obj.class_name == self.classNameToBeDetected:
-                    self.filteredObjects.append(obj)
-            return True
-        return False
+
+    def readDetectedObjectsDetectron(self, data):
+        if self.useFilteredObjects:
+            for idx, name in enumerate(data.class_names):
+                if name == self.classNameToBeDetected:
+                    self.detectron_boxes.append(data.boxes[idx])
+                    self.detectron_class_ids.append(data.class_ids[idx])
+                    self.detectron_class_names.append(data.class_names[idx])
+                    self.detectron_scores.append(data.scores[idx])
+                    self.detectron_masks.append(data.masks[idx])
+        else:
+            self.detectron_boxes = data.boxes
+            self.detectron_class_ids = data.class_ids
+            self.detectron_class_names = data.class_names
+            self.detectron_scores = data.scores
+            self.detectron_masks = data.masks
+
+
+        self.readObj = True
 
     
     def findObjectSimplifiedVersion(self):
         if self.pointingDirection != None:
             if self.pointingDirection == self.pointingLeftMsg:
-                for idx, obj in enumerate(self.filteredObjects):
+                for idx, obj in enumerate(self.detectedObjects):
                     if idx == 0:
                         left_obj = obj
 
@@ -144,7 +183,7 @@ class Perception:
 
             
             if self.pointingDirection == self.pointingRightMsg:
-                for idx, obj in enumerate(self.filteredObjects):
+                for idx, obj in enumerate(self.detectedObjects):
                     if idx == 0:
                         right_obj = obj
 
@@ -162,13 +201,7 @@ class Perception:
             x1, x2 = 0, w
             y1, y2 = self.pointingIntercept * x1 + self.pointingIntercept, self.pointingSlope * x2 + self.pointingIntercept
             line = Line(Point(x1, y1), Point(x2, y2))
-
-            if self.useFilteredObjects:
-                arr = self.filteredObjects
-            else:
-                arr = self.detectedObjects
-
-            for obj in arr:
+            for obj in self.detectedObjects:
                 x_top_left = obj.bounding_box.x_offset
                 y_top_left = obj.bounding_box.y_offset
 
@@ -193,17 +226,41 @@ class Perception:
         return None
 
 
+    def findClosestObjectToLine(self):
+        if self.pointingSlope != None and self.pointingIntercept != None:
+            perpendicularLineSlope = -1 / self.pointingSlope
+
+            for obj in self.detectedObjects:
+                # Find Bounding Box Center
+                obj_boundingBoxCenter_x = obj.bounding_box.x_offset + obj.bounding_box.width / 2
+                obj_boundingBoxCenter_y = obj.bounding_box.y_offset + obj.bounding_box.height / 2
+
+                # Find Intercept of the perpendicular line
+                perpendicularLineIntercept = obj_boundingBoxCenter_y - perpendicularLineSlope * obj_boundingBoxCenter_x
+
+                # Find Intersection (Point)
+
+                # Compute Distance between those two points (intersection and boundinx box center)
+
+
+
 
 def handler(signum, frame):
     exit(1)
 
 
 def main():
+    # Handle CTRL-C Interruption
     signal.signal(signal.SIGINT, handler)
+    # Read Arguments
+    yolo = True
+    if len(sys.argv) > 1 and sys.argv[1] == "detectron":
+        yolo = False
+    
     node_name = "perception_action"
     rospy.init_node(node_name, anonymous=True)
     rospy.loginfo("%s node created" % node_name)
-    n_percep = Perception()
+    n_percep = Perception(yolo)
     obj = n_percep.run()
     rospy.loginfo(obj)
     return obj
