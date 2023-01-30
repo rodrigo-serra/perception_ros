@@ -4,7 +4,6 @@ import rospy
 import cv2
 import numpy as np
 import signal
-import sys
 import math
 
 from std_msgs.msg import String, Float32
@@ -13,9 +12,22 @@ from cv_bridge import CvBridge, CvBridgeError
 from darknet_ros_py.msg import RecognizedObjectArrayStamped
 from sympy import Point, Polygon, Line
 
+# from mbot_perception_msgs.msg import TrackedObject3DList, TrackedObject3D, RecognizedObject3DList, RecognizedObject3D
+# from mbot_perception_msgs.srv import DeleteObject3D, DeleteObject3DRequest
 
-class Perception:
+class Singleton(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+class Perception():
+    __metaclass__ = Singleton
     def __init__(self, useYolo, easyDetection, useFilteredObjects, classNameToBeDetected):
+        # self.tracked_objects=None
+        # self.subscriber = rospy.Subscriber("/bayes_objects_tracker/tracked_objects", TrackedObject3DList, self.__trackCallback)
+
         # Variable Initialization
         self.img = None
         self.readObj = False
@@ -73,6 +85,7 @@ class Perception:
         self.pointingIntercept_sub = rospy.Subscriber(self.pointingIntercept_topic, Float32, self.getPointingIntercept)
 
     
+
     def run(self):
         while(not self.readObj):
             rospy.loginfo("Waiting for Object Detection...")
@@ -229,9 +242,163 @@ class Perception:
         return returnObject
 
 
-
     def handler(self, signum, frame):
         exit(1)
+    
+
+    # def __trackCallback(self,data):
+    #     self.tracked_objects = data
+
+
+
+    # def get_objects_tracker(self, confidence):
+    #     # get object message
+    #     tracked_objects = rospy.wait_for_message("/bayes_objects_tracker/tracked_objects", TrackedObject3DList)
+    #     object_frame = tracked_objects.header.frame_id
+    #     tracked_objects = tracked_objects.objects
+
+    #     object_dict = dict()
+    #     for object in tracked_objects:
+    #         obj_index = np.argmax(object.class_probability)
+
+    #         if object.class_probability[obj_index] > confidence:
+    #             new_object_name = object.class_name[obj_index]
+    #             new_object_info = [object.uuid, object.class_probability[obj_index],
+    #                             object.pose.pose.position.x, object.pose.pose.position.y, object.pose.pose.position.z,
+    #                             object.pose.pose.orientation.x, object.pose.pose.orientation.x, object.pose.pose.orientation.x,
+    #                             object.pose.pose.orientation.w]
+
+    #             # check if object already exists and remove it
+    #             repeated_obj_uuid, pruned_dict = self.__check_object_repetition(new_object_name, new_object_info, object_dict, obj_min_distance=0.2, remove_obj=True)
+    #             if repeated_obj_uuid:
+    #                 object_dict = pruned_dict
+
+    #             # add new perceived object
+    #             if new_object_name in object_dict.keys():
+    #                 object_dict[new_object_name].append(new_object_info)
+    #             else:
+    #                 object_dict[new_object_name] = [new_object_info]
+
+    #     return object_dict, object_frame
+
+    # def __check_object_repetition(self, new_object_name, new_object_info, dict_objects, obj_min_distance=0.2, remove_obj=True):
+    #     if remove_obj:
+    #         pruned_dict = dict_objects.copy()
+    #     new_obj_uuid = new_object_info[0]
+    #     new_obj_pos = [new_object_info[2], new_object_info[3], new_object_info[4]]
+
+    #     for obj_name, obj_info_list in dict_objects.items():
+    #         for obj_index, obj_info in enumerate(obj_info_list):
+    #             obj_uuid = obj_info[0]
+    #             obj_pos = [obj_info[2], obj_info[3], obj_info[4]]
+    #             if obj_uuid == new_obj_uuid or self.__euclidean_distance(new_obj_pos, obj_pos) < obj_min_distance:
+    #                 if remove_obj:
+    #                     del pruned_dict[obj_name][obj_index]
+    #                     if not pruned_dict[obj_name]:
+    #                         del pruned_dict[obj_name]
+
+    #                     return obj_uuid, pruned_dict
+    #                 else:
+    #                     return obj_uuid, None
+
+    #     return None, None
+
+    # def __euclidean_distance(self, p1, p2):
+    #     return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2 + (p1[2] - p2[2]) ** 2)
+
+    # def start_tracker(self):
+    # 	rospy.loginfo("Initializing object tracker...")
+    # 	object_tracker_init = rospy.Publisher('/bayes_objects_tracker/event_in', String, queue_size=1)
+    # 	rospy.sleep(0.5)
+    # 	object_tracker_init.publish('e_start')
+
+    # def stop_tracker(self):
+    #     rospy.loginfo("Stopping object tracker...")
+    #     object_tracker_init = rospy.Publisher('/bayes_objects_tracker/event_in', String, queue_size=1)
+    #     rospy.sleep(0.5)
+    #     object_tracker_init.publish('e_stop')
+
+    # def delete_tracked_objects(self):
+    #     self.start_tracker()
+    #     rospy.sleep(0.1)
+    #     tracked_objects = rospy.wait_for_message("/bayes_objects_tracker/tracked_objects", TrackedObject3DList)
+    #     object_frame = tracked_objects.header.frame_id
+    #     tracked_objects = tracked_objects.objects
+
+    #     self.stop_tracker()
+    #     clear_tracker_srv = rospy.ServiceProxy('/bayes_objects_tracker/delete_object', DeleteObject3D)
+    #     rospy.sleep(0.1)
+    #     clear_tracker_srv.wait_for_service(timeout=rospy.Duration(5))
+
+    #     for obj in tracked_objects:
+    #         delete_obj = DeleteObject3DRequest()
+    #         delete_obj.uuid = obj.uuid
+    #         rospy.loginfo(delete_obj)
+
+    #         try:
+    #             clear_tracker_srv.call(delete_obj)
+    #         except:
+    #             continue
+    #         # rospy.sleep(0.1)
+
+    #     self.start_tracker()
+
+    # def get_number_of_objects(self, object_name, confidence=0.8):
+    #     objects_dict = self.get_objects_tracker(confidence=confidence)
+    #     if object_name in objects_dict.keys():
+    #         return len(object_list[object_name])
+    #     else:
+    #         return 0
+
+    # # TODO: implement get_objects_classes
+    # def detect_object(self, class_to_detect):
+    #     pass
+
+    # # TODO: implement get_objects_classes
+    # def get_objects_classes(self, perceive_time, confidence):
+    #     pass
+
+    # TODO: finish implementing get_objects_locations (check object repetition is not adapted to this message type, but the rest is done)
+    # def get_objects_locations(self, perceive_time, confidence):
+    #     tracked_objects = []
+    #     initial_time = rospy.get_time()
+    #     elapsed_time = -np.inf
+    #     while perceive_time > elapsed_time:
+    #         obj_msg = rospy.wait_for_message("/localized_objects", RecognizedObject3DList)
+    #         object_frame = obj_msg.image_header.frame_id
+    #         for obj in obj_msg.objects
+    #             tracked_objects.append(obj)
+    #         elapsed_time = rospy.get_time() - initial_time
+    #
+    #     object_dict = dict()
+    #     for object in tracked_objects:
+    #         if object.confidence > confidence:
+    #             new_object_name = object.class_name
+    #             new_object_info = [object.confidence,
+    #                             object.pose.position.x, object.pose.position.y, object.pose.position.z,
+    #                             object.pose.orientation.x, object.pose.pose.orientation.x, object.pose.orientation.x,
+    #                             object.pose.orientation.w]
+    #
+    #             # check if object already exists and remove it
+    #             repeated_obj_uuid, pruned_dict = self.__check_object_repetition(new_object_name, new_object_info, object_dict, obj_min_distance=0.2, remove_obj=True)
+    #             if repeated_obj_uuid:
+    #                 object_dict = pruned_dict
+    #
+    #             # add new perceived object
+    #             if new_object_name in object_dict.keys():
+    #                 object_dict[new_object_name].append(new_object_info)
+    #             else:
+    #                 object_dict[new_object_name] = [new_object_info]
+    #
+    #     return object_dict, object_frame
+
+
+# if __name__ == '__main__':
+#     rospy.init_node('perception_action', anonymous=True)
+#     perception = Perception()
+#     objects, object_frame = perception.get_objects_tracker(confidence=0.5)
+#     print(objects)
+#     print(object_frame)
 
 
 def main():
@@ -240,9 +407,6 @@ def main():
     easyDetection = False
     useFilteredObjects = True
     classNameToBeDetected = "backpack"
-
-    # if len(sys.argv) > 1 and sys.argv[1] == "detectron":
-    #     yolo = False
     
     node_name = "perception_action"
     rospy.init_node(node_name, anonymous=True)
