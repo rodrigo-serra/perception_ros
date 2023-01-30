@@ -16,7 +16,7 @@ from sympy import Point, Polygon, Line
 
 
 class Perception:
-    def __init__(self, useYolo):
+    def __init__(self, useYolo, easyDetection, useFilteredObjects, classNameToBeDetected):
         # Variable Initialization
         self.img = None
         self.readObj = False
@@ -24,28 +24,20 @@ class Perception:
         self.pointingSlope = None
         self.pointingIntercept = None
         self.bridge = CvBridge()
+        
+        #
         self.useYolo = useYolo
+        self.easyDetection = easyDetection
+        self.useFilteredObjects = useFilteredObjects
+        self.classNameToBeDetected = classNameToBeDetected
 
-        # YOLO Variables
+        # Variables
         self.detectedObjects = []
         self.filteredObjects = []
-
-        # Detectron Variables
-        self.detectron_boxes = []
-        self.detectron_class_ids = []
-        self.detectron_class_names = []
-        self.detectron_scores = []
-        self.detectron_masks = []
-
-        #
-        self.easyDetection = False
-        self.useFilteredObjects = True
-        self.classNameToBeDetected = "backpack"
 
         # Msgs are defined in the mediapipeHolisticnode
         self.pointingLeftMsg = "left"
         self.pointingRightMsg = "right"
-
 
         # Topics
         if self.useYolo == True:
@@ -55,7 +47,7 @@ class Perception:
         else:
             self.camera_topic = "/camera/color/image_raw"
             self.readImgCompressed = False
-            self.detectedObjects_topic = "/detectron2_ros/result"
+            self.detectedObjects_topic = "/detectron2_ros/result_yolo_msg"
 
 
         self.pointingDirection_topic = "/perception/mediapipe_holistic/hand_pointing_direction"
@@ -70,11 +62,7 @@ class Perception:
             self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
 
         
-        if self.useYolo == True:
-            self.objDetection_sub = rospy.Subscriber(self.detectedObjects_topic, RecognizedObjectArrayStamped, self.readDetectedObjects)
-        else:
-            self.objDetection_sub = rospy.Subscriber(self.detectedObjects_topic, Result, self.readDetectedObjectsDetectron)
-
+        self.objDetection_sub = rospy.Subscriber(self.detectedObjects_topic, RecognizedObjectArrayStamped, self.readDetectedObjects)
 
         self.pointingDirection_sub = rospy.Subscriber(self.pointingDirection_topic, String, self.getPointingDirection)
 
@@ -89,10 +77,6 @@ class Perception:
 
         if self.detectedObjects == []:
             rospy.loginfo("No objects were detected!")
-
-        # rospy.loginfo(self.detectron_boxes)
-        # rospy.loginfo(self.detectedObjects)
-        # exit(1)
 
         if self.easyDetection:
             while(self.pointingDirection is None):
@@ -147,26 +131,6 @@ class Perception:
         else:
             for obj in data.objects.objects:    
                 self.detectedObjects.append(obj)
-
-        self.readObj = True
-
-
-    def readDetectedObjectsDetectron(self, data):
-        if self.useFilteredObjects:
-            for idx, name in enumerate(data.class_names):
-                if name == self.classNameToBeDetected:
-                    self.detectron_boxes.append(data.boxes[idx])
-                    self.detectron_class_ids.append(data.class_ids[idx])
-                    self.detectron_class_names.append(data.class_names[idx])
-                    self.detectron_scores.append(data.scores[idx])
-                    self.detectron_masks.append(data.masks[idx])
-        else:
-            self.detectron_boxes = data.boxes
-            self.detectron_class_ids = data.class_ids
-            self.detectron_class_names = data.class_names
-            self.detectron_scores = data.scores
-            self.detectron_masks = data.masks
-
 
         self.readObj = True
 
@@ -271,17 +235,24 @@ def handler(signum, frame):
 def main():
     # Handle CTRL-C Interruption
     signal.signal(signal.SIGINT, handler)
+    
     # Read Arguments
     yolo = True
-    if len(sys.argv) > 1 and sys.argv[1] == "detectron":
-        yolo = False
+    easyDetection = False
+    useFilteredObjects = True
+    classNameToBeDetected = "backpack"
+
+    # if len(sys.argv) > 1 and sys.argv[1] == "detectron":
+    #     yolo = False
     
     node_name = "perception_action"
     rospy.init_node(node_name, anonymous=True)
     rospy.loginfo("%s node created" % node_name)
-    n_percep = Perception(yolo)
+
+    n_percep = Perception(yolo, easyDetection, useFilteredObjects, classNameToBeDetected)
     obj = n_percep.run()
     rospy.loginfo(obj)
+
     return obj
 
 

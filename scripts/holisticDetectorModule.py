@@ -22,7 +22,7 @@ class holisticDetector():
         self.mpHolistic = mp.solutions.holistic
         self.holistic = self.mpHolistic.Holistic()
         self.visibilityThreshold = 0.9
-        self.handDistanceToBodyThreshold = 0.25
+        self.handDistanceToBodyThreshold = 0.3
         self.rightHandReturnMsg = "Right Hand"
         self.leftHandReturnMsg = "Left Hand"
 
@@ -286,9 +286,6 @@ class holisticDetector():
 
         # x1 = handCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_PIP][0]
         # y1 = handCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_PIP][1]
-
-        # x1 = self.imgPoseCoordinates[self.mpHolistic.PoseLandmark.RIGHT_SHOULDER].x
-        # y1 = self.imgPoseCoordinates[self.mpHolistic.PoseLandmark.RIGHT_SHOULDER].y
 
         x2 = handCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP][0]
         y2 = handCoordinates[self.mpHolistic.HandLandmark.INDEX_FINGER_TIP][1]
