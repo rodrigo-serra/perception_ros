@@ -1,4 +1,6 @@
 <launch>
+  <!-- Launch Real Sense Node -->
+  <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch"/> -->
 
   <!-- Camera topic (Real Sense) -->
   <!-- <arg name="camera_topic" default="/camera/color/image_raw" />
@@ -14,14 +16,22 @@
   <arg name="img_compressed" default="true" />
 
 
-  <!-- Use Hands to Determine Pointing Direction. Otherwise use Arms to determine pointing direction -->
-  <arg name="pointing_hands" default="false" />
-
   <!-- Visualization -->
   <arg name="visualization" default="true" />
 
-  <!-- Launch Real Sense Node -->
-  <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch"/> -->
+  <!-- MediaPipe Holistic Illustration Variables -->
+  <arg name="drawPoseLandmarks" default="true" />
+  <arg name="drawFaceLandmarks" default="false" />
+  <arg name="drawRightHandLandmarks" default="true" />
+  <arg name="drawLeftHandLandmarks" default="true" />
+  <arg name="drawFaceBoundary" default="false" />
+
+  <!-- Use Hands to Determine Pointing Direction (true). Otherwise use Arms to determine pointing direction (false) -->
+  <arg name="pointing_hands" default="false" />
+
+  <!-- Definition of Pointing Hand/Arm Msg -->
+  <arg name="pointing_right_hand_msg" default="right" />
+  <arg name="pointing_left_hand_msg" default="left" />
 
   <!-- Launch Mediapipe Holistic Node -->
   <node ns="perception" name="mediapipe_holistic" pkg="perception_tests" type="mediapipeHolisticnode.py" output="screen">
@@ -29,6 +39,13 @@
     <param name="img_compressed" value="$(arg img_compressed)" type="bool"/>
     <param name="pointing_hands" value="$(arg pointing_hands)" type="bool"/>
     <param name="visualization" value="$(arg visualization)" type="bool"/>
+    <param name="drawPoseLandmarks" value="$(arg drawPoseLandmarks)" type="bool"/>
+    <param name="drawFaceLandmarks" value="$(arg drawFaceLandmarks)" type="bool"/>
+    <param name="drawRightHandLandmarks" value="$(arg drawRightHandLandmarks)" type="bool"/>
+    <param name="drawLeftHandLandmarks" value="$(arg drawLeftHandLandmarks)" type="bool"/>
+    <param name="drawFaceBoundary" value="$(arg drawFaceBoundary)" type="bool"/>
+    <param name="pointing_right_hand_msg" value="$(arg pointing_right_hand_msg)" type="string"/>
+    <param name="pointing_left_hand_msg" value="$(arg pointing_left_hand_msg)" type="string"/>
   </node>
 
 

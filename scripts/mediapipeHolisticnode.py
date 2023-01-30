@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import rospy
-import rospkg
 import cv2
 import numpy as np
 import os
@@ -25,23 +24,12 @@ class MediapipeHolistic:
         rospy.init_node(node_name, anonymous=False)
         rospy.loginfo("%s node created" % node_name)
 
-        rospack = rospkg.RosPack()
-
         # Variable Initialization
-        self.directory = rospack.get_path('perception_tests') + '/images/'
         self.rate = rospy.Rate(10)
         self.img = None
         self.ctr = True
         self.detector = holisticDetector()
-
-        self.drawPose = True
-        self.drawFace = False
-        self.drawRightHand = True
-        self.drawLeftHand = True
-        self.getFaceBoundary = False
-        
         self.currentEvent = None
-        
         self.bridge = CvBridge()
 
         # Read from ROS Param
@@ -49,6 +37,13 @@ class MediapipeHolistic:
         self.readImgCompressed = rospy.get_param("~img_compressed")
         self.usePointingHands = rospy.get_param("~pointing_hands")
         self.showImg = rospy.get_param("~visualization")
+        self.drawPose = rospy.get_param("~drawPoseLandmarks")
+        self.drawFace = rospy.get_param("~drawFaceLandmarks")
+        self.drawRightHand = rospy.get_param("~drawRightHandLandmarks")
+        self.drawLeftHand = rospy.get_param("~drawLeftHandLandmarks")
+        self.drawFaceBoundary = rospy.get_param("~drawFaceBoundary")
+        self.pointingRightHandMsg = rospy.get_param("~pointing_right_hand_msg")
+        self.pointingLeftHandMsg = rospy.get_param("~pointing_left_hand_msg")
 
         # Subscribe to Camera Topic
         if self.readImgCompressed:
@@ -136,7 +131,7 @@ class MediapipeHolistic:
                     isFaceLandmarks = self.detector.getFaceLandmarks(self.img)
                     if isFaceLandmarks:
                         self.publishFaceCoordinates()
-                        if self.getFaceBoundary:
+                        if self.drawFaceBoundary:
                             self.img = self.getFaceMask()
 
 
@@ -171,11 +166,9 @@ class MediapipeHolistic:
                             self.mp_pointingDirectionHand_slope_pub.publish(h_slope)
                             self.mp_pointingDirectionHand_intercept_pub.publish(h_intercept)
                             if h_slope > 0:
-                                # self.mp_pointingDirectionHand_direction_pub.publish(isPointingHand + " Pointing Left")
-                                self.mp_pointingDirectionHand_direction_pub.publish("left")
+                                self.mp_pointingDirectionHand_direction_pub.publish(self.pointingLeftHandMsg)
                             else:
-                                # self.mp_pointingDirectionHand_direction_pub.publish(isPointingHand + " Pointing Right")
-                                self.mp_pointingDirectionHand_direction_pub.publish("right")
+                                self.mp_pointingDirectionHand_direction_pub.publish(self.pointingRightHandMsg)
                         
 
                     if self.detector.getRightArmLength():
@@ -244,7 +237,6 @@ class MediapipeHolistic:
 
 
     def eventCallback(self, data):
-        # rospy.loginfo("Got new event: " + str(data.data))
         self.currentEvent = data.data
 
     
