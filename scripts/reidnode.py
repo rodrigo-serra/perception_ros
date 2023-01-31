@@ -35,22 +35,22 @@ class Reid:
         self.ctr = True
         self.detector = holisticDetector()
         self.cropOffset = 50
-        
         self.currentEvent = None
-        self.runHolistic = True
         self.takePhoto = False
         self.runAutomatic = False
+        self.bridge = CvBridge()
+        
 
         # Create arrays of known face encodings and their names
         self.known_face_encodings = []
         self.known_face_names = []
         
-        self.bridge = CvBridge()
 
         # Read from ROS Param
         self.camera_topic = rospy.get_param("~camera_topic")
         self.readImgCompressed = rospy.get_param("~img_compressed")
         self.draw = rospy.get_param("~visualization")
+        self.extractFaceBoundaryOnly = rospy.get_param("~extract_face_boundary_only")
 
         # Subscribe to Camera Topic
         if self.readImgCompressed:
@@ -107,9 +107,7 @@ class Reid:
                     self.ctr = True
                     self.detector = holisticDetector()
                     self.cropOffset = 50
-                    
                     self.currentEvent = None
-                    self.runHolistic = True
                     self.takePhoto = False
                     self.runAutomatic = False
 
@@ -129,7 +127,7 @@ class Reid:
                     face_locations, face_names = faceRecognition(self.img, self.known_face_encodings, self.known_face_names)
                     
                     if face_names != []:
-                        if self.runHolistic:
+                        if self.extractFaceBoundaryOnly:
                             res = self.lookIntoDetectPeopleHolistic(face_locations, face_names)
                         else:
                             res = self.lookIntoDetectPeople(face_locations, face_names)

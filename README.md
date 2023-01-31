@@ -86,3 +86,7 @@ The topics with "landmarks" on its name return the 2D or 3D coordinates for each
 With the measurements we get from mediapipe, we can get information such as right and left arm length, shoulder length, and so on. Topics with length on their name carry this extra data in a Float32 message format. These measurements can be added as required. For instance, the right and left leg lengths aren't published yet.
 
 This node also determines which hand someone is pointing with and computes the slope and intercept of the line segment associated with the pointing direction. The ".../hand_pointing_slope" and the ".../hand_pointing_intercept" topics are published in a Float32 message format whereas the ".../hand_pointing_direction" topic publishes a string.
+
+&nbsp;
+
+## Reid
