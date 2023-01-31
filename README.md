@@ -137,3 +137,33 @@ The node also publishes other information regarding the person or persons detect
 ```
 
 Both topics are published using a custom message (StringArray.msg). If the node does not recognize a person, it will display "Unknown". The detection record only keeps track of people whose photo was taken and added to the encoder.
+
+
+## Perception API
+### **perception.py**
+This node requires the mediapipe holistic node to be running and the Detectron or YOLO nodes. The first provides the measurements needed for the pointing direction as an example, and the second the information regarding object detection.
+
+The API has the follwing actions:
+
+- detectPointingObject(yolo, easyDetection, useFilteredObjects, classNameToBeDetected)
+
+  It takes four parameters as inputs. The first three are boolean (True or False), and the last is a string. The yolo parameter tells the node to subscribe to the YOLO or to the Detectron results. 
+  
+  The easyDetection stands for two types of detection. The first, the simple approach, focuses on the arm direction to determine the pointing direction. Then it selects the object farthest left or farthest right accordingly. This approach works under the assumption that the useFilteredObjects is also set to true and that we are choosing between two objects. 
+  The second approach finds which object gets intercepted by the pointing line segment and returns that object. If no object is detected, it returns the one closest to the line.
+  
+  When the useFilteredObjects input parameter is true, the node will look at objects whose class is given by the classNameToBeDetected input parameter. 
+
+  ```bash
+    yolo = True
+    easyDetection = False
+    useFilteredObjects = True
+    classNameToBeDetected = "backpack"
+    
+    node_name = "perception_action"
+    rospy.init_node(node_name, anonymous=True)
+    rospy.loginfo("%s node created" % node_name)
+
+    n_percep = Perception(yolo, easyDetection, useFilteredObjects, classNameToBeDetected)
+    obj = n_percep.detectPointingObject()
+  ```

@@ -49,9 +49,13 @@ class Perception():
         self.detectedObjects = []
         self.filteredObjects = []
 
-        # Msgs are defined in the mediapipeHolisticnode
-        self.pointingLeftMsg = "left"
-        self.pointingRightMsg = "right"
+        # Msgs are defined in the mediapipeHolisticnode launch file
+        try:
+            self.pointingLeftMsg = rospy.get_param("/perception/mediapipe_holistic/pointing_left_hand_msg")
+            self.pointingRightMsg = rospy.get_param("/perception/mediapipe_holistic/pointing_right_hand_msg")
+        except:
+            rospy.logerr ("Mediapipe node must be running!")
+            exit(1)
 
         # Topics
         if self.useYolo == True:
@@ -86,7 +90,7 @@ class Perception():
 
     
 
-    def run(self):
+    def detectPointingObject(self):
         while(not self.readObj):
             rospy.loginfo("Waiting for Object Detection...")
 
@@ -413,7 +417,7 @@ def main():
     rospy.loginfo("%s node created" % node_name)
 
     n_percep = Perception(yolo, easyDetection, useFilteredObjects, classNameToBeDetected)
-    obj = n_percep.run()
+    obj = n_percep.detectPointingObject()
     rospy.loginfo(obj)
 
     return obj
