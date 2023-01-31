@@ -18,8 +18,8 @@
   <!-- Visualization -->
   <arg name="visualization" default="true" />
   
-  <!-- When taking photo, only extract the face boundary -->
-  <arg name="extract_face_boundary_only" default="false" />
+  <!-- When taking photo, only extracts the face boundary -->
+  <arg name="extract_face_boundary_only" default="true" />
 
   <!-- Launch Reid Node -->
   <node ns="perception" name="reid" pkg="perception_tests" type="reidnode.py" output="log">

@@ -90,3 +90,50 @@ This node also determines which hand someone is pointing with and computes the s
 &nbsp;
 
 ## Reid
+### **reid.launch**
+It launches the reid node (reidnode.py) and sets all the variables required for the proper functioning of the node. The variables are the following:
+
+- "camera_topic"
+```bash
+<arg name="camera_topic" default="/camera/color/image_raw" />
+```
+
+- "img_compressed": It will depend on the "camera_topic". Set it to true or false accordingly.
+```bash
+<arg name="img_compressed" default="false" />
+```
+
+- "visualization": If set to true, the node will launch a visualization window.
+```bash
+<arg name="visualization" default="true" />
+```
+
+- "extract_face_boundary_only": If set to true, the node will use the mediapipe holistic module to extract the face boundary. Otherwise, it will take a rectangular photo of the person's face.
+```bash
+<arg name="extract_face_boundary_only" default="true" />
+```
+
+### **reidnode.py**
+It's launched by the reid.launch where all the variables are set. This node also depends on the holisticDetectorModule.py where all the operations regarding mediapipe take place, and on the facerecModule.py where the reid is performed. 
+
+Regarding topics, the node subscribes to the topic **event_in** which can take a string msg. 
+```bash
+/perception/reid/event_in
+```
+
+Depending on the msg, the node will behave differently. The options are the following:
+- **take_photo**, it takes a photo of the person or persons currently being detected;
+- **enable_automatic**, it activates the automatic mode where for each new person detected, it automatically takes a photo and adds them to the detection record;
+- **disable_automatic**, it deactivates the automatic mode;
+- **stop**, it stops the node from publishing any results. If "visualization" is set to true, it will close the visualization window;
+- **start**, restarts publishing and relaunches the visualization window if the "visualization" is set to true;
+- **reset**, resets the node using default options;
+
+The node also publishes other information regarding the person or persons detected and the detection record. The topics are the following:
+
+```bash
+/perception/reid/current_detection
+/perception/reid/detection_record
+```
+
+Both topics are published using a custom message (StringArray.msg). If the node does not recognize a person, it will display "Unknown". The detection record only keeps track of people whose photo was taken and added to the encoder.
