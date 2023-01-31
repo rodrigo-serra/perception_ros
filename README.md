@@ -139,8 +139,7 @@ The node also publishes other information regarding the person or persons detect
 Both topics are published using a custom message (StringArray.msg). If the node does not recognize a person, it will display "Unknown". The detection record only keeps track of people whose photo was taken and added to the encoder.
 
 
-## Perception API
-### **perception.py**
+## Perception API (perception.py)
 This node requires the mediapipe holistic node to be running and the Detectron or YOLO nodes. The first provides the measurements needed for the pointing direction as an example, and the second the information regarding object detection.
 
 The API has the follwing actions:
