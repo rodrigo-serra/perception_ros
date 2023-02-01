@@ -3,7 +3,6 @@
 import rospy
 import cv2
 import numpy as np
-import signal
 import math
 
 from std_msgs.msg import String, Float32
@@ -24,139 +23,127 @@ class Singleton(type):
 
 class Perception():
     __metaclass__ = Singleton
-    def __init__(self, useYolo, easyDetection, useFilteredObjects, classNameToBeDetected):
+    def __init__(self):
         # self.tracked_objects=None
         # self.subscriber = rospy.Subscriber("/bayes_objects_tracker/tracked_objects", TrackedObject3DList, self.__trackCallback)
 
         # Variable Initialization
-        self.img = None
-        self.readObj = False
+        self.__img = None
         self.pointingDirection = None
         self.pointingSlope = None
         self.pointingIntercept = None
-        self.bridge = CvBridge()
-
-        # Handle CTRL-C Interruption
-        signal.signal(signal.SIGINT, self.handler)
-        
-        #
-        self.useYolo = useYolo
-        self.easyDetection = easyDetection
-        self.useFilteredObjects = useFilteredObjects
-        self.classNameToBeDetected = classNameToBeDetected
-
-        # Variables
         self.detectedObjects = []
-        self.filteredObjects = []
+     
 
-        # Msgs are defined in the mediapipeHolisticnode launch file
-        try:
-            self.pointingLeftMsg = rospy.get_param("/perception/mediapipe_holistic/pointing_left_hand_msg")
-            self.pointingRightMsg = rospy.get_param("/perception/mediapipe_holistic/pointing_right_hand_msg")
-        except:
-            rospy.logerr ("Mediapipe node must be running!")
-            exit(1)
-
-        # Topics
-        if self.useYolo == True:
-            self.camera_topic = "/object_detector/detection_image/compressed"
-            self.readImgCompressed = True
-            self.detectedObjects_topic = "/object_detector/detections"
+    def detectPointingObject(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
+        self.detectedObjects = self.returnDetectedObjects()
+        if easyDetection:
+            self.getPointingDirection()
+            return self.__findObjectSimplifiedVersion()
         else:
-            self.camera_topic = "/camera/color/image_raw"
-            self.readImgCompressed = False
-            self.detectedObjects_topic = "/detectron2_ros/result_yolo_msg"
-
-
-        self.pointingDirection_topic = "/perception/mediapipe_holistic/hand_pointing_direction"
-        self.pointingSlope_topic = "/perception/mediapipe_holistic/hand_pointing_slope"
-        self.pointingIntercept_topic = "/perception/mediapipe_holistic/hand_pointing_intercept"
-
-
-        # Subscribe to Camera Topic
-        if self.readImgCompressed:
-            self.image_sub = rospy.Subscriber(self.camera_topic, CompressedImage, self.imgCallback)
-        else:
-            self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
-
-        
-        self.objDetection_sub = rospy.Subscriber(self.detectedObjects_topic, RecognizedObjectArrayStamped, self.readDetectedObjects)
-
-        self.pointingDirection_sub = rospy.Subscriber(self.pointingDirection_topic, String, self.getPointingDirection)
-
-        self.pointingSlope_sub = rospy.Subscriber(self.pointingSlope_topic, Float32, self.getPointingSlope)
-
-        self.pointingIntercept_sub = rospy.Subscriber(self.pointingIntercept_topic, Float32, self.getPointingIntercept)
-
-    
-
-    def detectPointingObject(self):
-        while(not self.readObj):
-            rospy.loginfo("Waiting for Object Detection...")
-
-        if self.detectedObjects == []:
-            rospy.loginfo("No objects were detected!")
-
-        if self.easyDetection:
-            while(self.pointingDirection is None):
-                rospy.loginfo("Getting pointing direction...")
-
-            return  self.findObjectSimplifiedVersion()
-        
-        else:
-            while(self.img is None):
-                rospy.loginfo("Getting img...")
-
-            while(self.pointingSlope is None and self.pointingIntercept is None):
-                rospy.loginfo("Getting pointing slope and intercept...")
-
-            res = self.lineIntersectionPolygon()
+            self.__getImg(useYolo)
+            self.getPointingSlope()
+            self.getPointingIntercept()
+            
+            res = self.__lineIntersectionPolygon()
             if res != None:
                 return res
             else:
-                return self.findClosestObjectToLine()
+                return self.__findClosestObjectToLine()
 
 
+    def returnDetectedObjects(self, useYolo = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
+        dObjects = []
+        detectedObjects_topic = "/detectron2_ros/result_yolo_msg"
+        if useYolo == True:
+            detectedObjects_topic = "/object_detector/detections"
 
-    def imgCallback(self, data):
         try:
-            if self.readImgCompressed:
-                self.img = self.bridge.compressed_imgmsg_to_cv2(data, "bgr8")
-            else:
-                self.img = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            data = rospy.wait_for_message(detectedObjects_topic, RecognizedObjectArrayStamped, timeout=3)
+        except:
+            rospy.logerr("Object Detection Results are not being published!")
+            exit(1)
 
+        if useFilteredObjects:
+            for obj in data.objects.objects:
+                if obj.class_name == classNameToBeDetected and obj.confidence > score:
+                    dObjects.append(obj)
+        else:
+            for obj in data.objects.objects:    
+                dObjects.append(obj)
+        
+        return dObjects
+
+
+    def __getImg(self, useYolo):
+        bridge = CvBridge()
+        camera_topic = "/camera/color/image_raw"
+        readImgMsg = Image
+        if useYolo == True:
+            camera_topic = "/object_detector/detection_image/compressed"
+            readImgMsg = CompressedImage
+
+        try:
+            data = rospy.wait_for_message(camera_topic, readImgMsg, timeout=3)
+        except:
+            rospy.logerr("Could not read img from: " + camera_topic)
+
+        try:
+            if readImgMsg == CompressedImage:
+                self.__img = bridge.compressed_imgmsg_to_cv2(data, "bgr8")
+            else:
+                self.__img = bridge.imgmsg_to_cv2(data, "bgr8")
 
         except CvBridgeError as e:
             print(e)
 
 
-    def getPointingDirection(self, data):
+    def getPointingDirection(self):
+        pointingDirection_topic = "/perception/mediapipe_holistic/hand_pointing_direction"
+        try:
+            data = rospy.wait_for_message(pointingDirection_topic, String, timeout=3)
+        except:
+            rospy.logerr("Could not get Pointing Direction!")
+            exit(1)
+
         self.pointingDirection = data.data
+        return self.pointingDirection
 
     
-    def getPointingSlope(self, data):
+    def getPointingSlope(self):
+        pointingSlope_topic = "/perception/mediapipe_holistic/hand_pointing_slope"
+        try:
+            data = rospy.wait_for_message(pointingSlope_topic, Float32, timeout=3)
+        except:
+            rospy.logerr("Could not get Slope of the Pointing Line Segment!")
+
         self.pointingSlope = data.data
-
+        return self.pointingSlope
     
-    def getPointingIntercept(self, data):
+
+    def getPointingIntercept(self):
+        pointingIntercept_topic = "/perception/mediapipe_holistic/hand_pointing_intercept"
+        try:
+            data = rospy.wait_for_message(pointingIntercept_topic, Float32, timeout=3)
+        except:
+            rospy.logerr("Could not get Intercept of the Pointing Line Segment!")
+
         self.pointingIntercept = data.data
-
-
-    def readDetectedObjects(self, data):
-        if self.useFilteredObjects:
-            for obj in data.objects.objects:
-                if obj.class_name == self.classNameToBeDetected:
-                    self.detectedObjects.append(obj)
-        else:
-            for obj in data.objects.objects:    
-                self.detectedObjects.append(obj)
-
-        self.readObj = True
+        return self.pointingIntercept
 
     
-    def findObjectSimplifiedVersion(self):
+    def __findObjectSimplifiedVersion(self):
+        # Msgs are defined in the mediapipeHolisticnode launch file
+        try:
+            pointingLeftMsg = rospy.get_param("/perception/mediapipe_holistic/pointing_left_hand_msg")
+            pointingRightMsg = rospy.get_param("/perception/mediapipe_holistic/pointing_right_hand_msg")
+        except:
+            rospy.logerr ("Mediapipe node must be running!")
+            exit(1)
+
+        
         if self.pointingDirection != None:
-            if self.pointingDirection == self.pointingLeftMsg:
+            if self.pointingDirection == pointingLeftMsg:
                 for idx, obj in enumerate(self.detectedObjects):
                     if idx == 0:
                         left_obj = obj
@@ -167,7 +154,7 @@ class Perception():
                 return left_obj
 
             
-            if self.pointingDirection == self.pointingRightMsg:
+            if self.pointingDirection == pointingRightMsg:
                 for idx, obj in enumerate(self.detectedObjects):
                     if idx == 0:
                         right_obj = obj
@@ -180,12 +167,13 @@ class Perception():
         return None
 
 
-    def lineIntersectionPolygon(self):
+    def __lineIntersectionPolygon(self):
         if self.pointingSlope != None and self.pointingIntercept != None:
-            h, w, c = self.img.shape
+            h, w, c = self.__img.shape
             x1, x2 = 0, w
             y1, y2 = self.pointingIntercept * x1 + self.pointingIntercept, self.pointingSlope * x2 + self.pointingIntercept
             line = Line(Point(x1, y1), Point(x2, y2))
+
             for obj in self.detectedObjects:
                 x_top_left = obj.bounding_box.x_offset
                 y_top_left = obj.bounding_box.y_offset
@@ -211,7 +199,7 @@ class Perception():
         return None
 
 
-    def findClosestObjectToLine(self):
+    def __findClosestObjectToLine(self):
         returnObject = None
         returnDist = None
         
@@ -244,10 +232,6 @@ class Perception():
                     returnDist = dist
 
         return returnObject
-
-
-    def handler(self, signum, frame):
-        exit(1)
     
 
     # def __trackCallback(self,data):
@@ -406,22 +390,23 @@ class Perception():
 
 
 def main():
-    # Read Arguments
-    yolo = True
-    easyDetection = False
-    useFilteredObjects = True
-    classNameToBeDetected = "backpack"
-    
     node_name = "perception_action"
     rospy.init_node(node_name, anonymous=True)
     rospy.loginfo("%s node created" % node_name)
 
-    n_percep = Perception(yolo, easyDetection, useFilteredObjects, classNameToBeDetected)
-    obj = n_percep.detectPointingObject()
-    rospy.loginfo(obj)
+    n_percep = Perception()
+    
+    # obj = n_percep.detectPointingObject()
+    # rospy.loginfo(obj)
+    # return obj
 
-    return obj
+    # objs = n_percep.returnDetectedObjects()
+    # rospy.loginfo(objs)
+    # return objs
 
+    m = n_percep.getPointingDirection()
+    rospy.loginfo(m)
+    return m
 
 # Main function
 if __name__ == '__main__':
