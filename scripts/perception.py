@@ -29,14 +29,14 @@ class Perception():
 
         # Variable Initialization
         self.__img = None
-        self.pointingDirection = None
-        self.pointingSlope = None
-        self.pointingIntercept = None
-        self.detectedObjects = []
+        self.__pointingDirection = None
+        self.__pointingSlope = None
+        self.__pointingIntercept = None
+        self.__detectedObjects = []
      
 
     def detectPointingObject(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
-        self.detectedObjects = self.returnDetectedObjects()
+        self.__detectedObjects = self.returnDetectedObjects()
         if easyDetection:
             self.getPointingDirection()
             return self.__findObjectSimplifiedVersion()
@@ -106,8 +106,8 @@ class Perception():
             rospy.logerr("Could not get Pointing Direction!")
             exit(1)
 
-        self.pointingDirection = data.data
-        return self.pointingDirection
+        self.__pointingDirection = data.data
+        return self.__pointingDirection
 
     
     def getPointingSlope(self):
@@ -117,8 +117,8 @@ class Perception():
         except:
             rospy.logerr("Could not get Slope of the Pointing Line Segment!")
 
-        self.pointingSlope = data.data
-        return self.pointingSlope
+        self.__pointingSlope = data.data
+        return self.__pointingSlope
     
 
     def getPointingIntercept(self):
@@ -128,8 +128,8 @@ class Perception():
         except:
             rospy.logerr("Could not get Intercept of the Pointing Line Segment!")
 
-        self.pointingIntercept = data.data
-        return self.pointingIntercept
+        self.__pointingIntercept = data.data
+        return self.__pointingIntercept
 
     
     def __findObjectSimplifiedVersion(self):
@@ -142,9 +142,9 @@ class Perception():
             exit(1)
 
         
-        if self.pointingDirection != None:
-            if self.pointingDirection == pointingLeftMsg:
-                for idx, obj in enumerate(self.detectedObjects):
+        if self.__pointingDirection != None:
+            if self.__pointingDirection == pointingLeftMsg:
+                for idx, obj in enumerate(self.__detectedObjects):
                     if idx == 0:
                         left_obj = obj
 
@@ -154,8 +154,8 @@ class Perception():
                 return left_obj
 
             
-            if self.pointingDirection == pointingRightMsg:
-                for idx, obj in enumerate(self.detectedObjects):
+            if self.__pointingDirection == pointingRightMsg:
+                for idx, obj in enumerate(self.__detectedObjects):
                     if idx == 0:
                         right_obj = obj
 
@@ -168,13 +168,13 @@ class Perception():
 
 
     def __lineIntersectionPolygon(self):
-        if self.pointingSlope != None and self.pointingIntercept != None:
+        if self.__pointingSlope != None and self.__pointingIntercept != None:
             h, w, c = self.__img.shape
             x1, x2 = 0, w
-            y1, y2 = self.pointingIntercept * x1 + self.pointingIntercept, self.pointingSlope * x2 + self.pointingIntercept
+            y1, y2 = self.__pointingIntercept * x1 + self.__pointingIntercept, self.__pointingSlope * x2 + self.__pointingIntercept
             line = Line(Point(x1, y1), Point(x2, y2))
 
-            for obj in self.detectedObjects:
+            for obj in self.__detectedObjects:
                 x_top_left = obj.bounding_box.x_offset
                 y_top_left = obj.bounding_box.y_offset
 
@@ -203,10 +203,10 @@ class Perception():
         returnObject = None
         returnDist = None
         
-        if self.pointingSlope != None and self.pointingIntercept != None:
-            perpendicularLineSlope = -1 / self.pointingSlope
+        if self.__pointingSlope != None and self.__pointingIntercept != None:
+            perpendicularLineSlope = -1 / self.__pointingSlope
 
-            for idx, obj in enumerate(self.detectedObjects):
+            for idx, obj in enumerate(self.__detectedObjects):
                 # Find Bounding Box Center
                 obj_boundingBoxCenter_x = obj.bounding_box.x_offset + obj.bounding_box.width / 2
                 obj_boundingBoxCenter_y = obj.bounding_box.y_offset + obj.bounding_box.height / 2
@@ -215,8 +215,8 @@ class Perception():
                 perpendicularLineIntercept = obj_boundingBoxCenter_y - perpendicularLineSlope * obj_boundingBoxCenter_x
 
                 # Find Intersection (Point)
-                inter_x = (perpendicularLineIntercept - self.pointingIntercept) / (self.pointingSlope - perpendicularLineSlope)
-                inter_y = self.pointingSlope * inter_x + self.pointingIntercept
+                inter_x = (perpendicularLineIntercept - self.__pointingIntercept) / (self.__pointingSlope - perpendicularLineSlope)
+                inter_y = self.__pointingSlope * inter_x + self.__pointingIntercept
 
                 # Compute Distance between those two points (intersection and bounding box center)
                 dx = math.pow(obj_boundingBoxCenter_x - inter_x, 2)
@@ -396,17 +396,17 @@ def main():
 
     n_percep = Perception()
     
-    # obj = n_percep.detectPointingObject()
-    # rospy.loginfo(obj)
-    # return obj
+    obj = n_percep.detectPointingObject()
+    rospy.loginfo(obj)
+    return obj
 
     # objs = n_percep.returnDetectedObjects()
     # rospy.loginfo(objs)
     # return objs
 
-    m = n_percep.getPointingDirection()
-    rospy.loginfo(m)
-    return m
+    # m = n_percep.getPointingDirection()
+    # rospy.loginfo(m)
+    # return m
 
 # Main function
 if __name__ == '__main__':

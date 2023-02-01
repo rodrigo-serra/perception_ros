@@ -144,9 +144,12 @@ Both topics are published using a custom message (StringArray.msg). If the node 
 
 The API has the follwing actions:
 
+- returnDetectedObjects(useYolo = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5)
+
+
 - detectPointingObject(useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5)
   
-  This action requires the mediapipe holistic node to be running and the Detectron or YOLO nodes. The first provides the measurements needed for the pointing direction, and the second the information regarding object detection.
+  This action returns the object someone is pointing at. It requires the mediapipe holistic node to be running and the Detectron or YOLO nodes. The first provides the measurements needed for the pointing direction, and the second the information regarding object detection.
 
   It takes five parameters as inputs. The yolo parameter tells the node to subscribe to the YOLO or to the Detectron results. 
   
@@ -154,4 +157,13 @@ The API has the follwing actions:
   The second approach finds which object gets intercepted by the pointing line segment and returns that object. If no object is detected, it returns the one closest to the line.
   
   When the useFilteredObjects input parameter is true, the node will look at objects whose class is given by the classNameToBeDetected input parameter and whose score (confidence) is above the threshold. 
+
+
+- getPointingDirection()
+
+- getPointingSlope()
+
+- getPointingIntercept()
+
+
 
