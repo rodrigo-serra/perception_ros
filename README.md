@@ -146,7 +146,7 @@ The API has the follwing actions:
 
 - returnDetectedObjects(useYolo = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5)
   
-  It returns all the objects detected by the YOLO or the detectron. Hence, it requires one of the nodes to be running.
+  It returns all the objects detected by the YOLO or the detectron. Hence, it requires one of the nodes to be running. The msg type is RecognizedObjectArrayStamped.
 
   It takes four parameters as inputs. The yolo parameter tells the node to subscribe to the YOLO or to the Detectron results. 
 
@@ -154,7 +154,7 @@ The API has the follwing actions:
 
 - detectPointingObject(useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5)
   
-  This action returns the object someone is pointing at. It requires the mediapipe holistic node to be running and the Detectron or YOLO nodes. The first provides the measurements needed for the pointing direction, and the second the information regarding object detection.
+  This action returns the object someone is pointing at. It requires the mediapipe holistic node to be running and the Detectron or YOLO nodes. The first provides the measurements needed for the pointing direction, and the second the information regarding object detection. The msg type is RecognizedObjectArrayStamped.
 
   It takes five parameters as inputs. The yolo parameter tells the node to subscribe to the YOLO or to the Detectron results. 
   
@@ -166,15 +166,55 @@ The API has the follwing actions:
 
 - getPointingDirection()
 
-  It returns the pointing direction, i.e., left or right. It requires the mediapipe holistic node to be running.
+  It returns the pointing direction, i.e., left or right. The msg type is Float32. It requires the mediapipe holistic node to be running.
 
 - getPointingSlope()
 
-  It returns the slope of the pointing line segment. It requires the mediapipe holistic node to be running.
+  It returns the slope of the pointing line segment. The msg type is Float32. It requires the mediapipe holistic node to be running.
 
 - getPointingIntercept()
 
-  It returns the intercept of the pointing line segment. It requires the mediapipe holistic node to be running.
+  It returns the intercept of the pointing line segment. The msg type is Float32. It requires the mediapipe holistic node to be running.
+
+- getPoseWorldLandmarks()
+  
+  It returns the 3D coordinates (x, y, z) and score (visibility) of each body landmark. The msg type is MediapipePointInfoArray. It requires the mediapipe holistic node to be running.
+
+- getFaceLandmarks()
+
+  It returns 2D coordinates (x, y) and the score (visibility) for each face landmark. Note that it will also return a z coordinate which is -1, thus ought to be ignored. The msg type is MediapipePointInfoArray. It requires the mediapipe holistic node to be running.
+
+- getImgPoseLandmarks()
+
+  It returns 2D coordinates (x, y) and the score (visibility) for each img pose landmark. Note that it will also return a z coordinate which is -1, thus ought to be ignored. The msg type is MediapipePointInfoArray. It requires the mediapipe holistic node to be running.
 
 
+- getRightHandLandmarks()
+
+  It returns 2D coordinates (x, y) for each img right hand landmark. Note that it will also return a z coordinate which is -1 and score (visibility) also -1, thus ought to be ignored. The msg type is MediapipePointInfoArray. It requires the mediapipe holistic node to be running.
+
+- getLeftHandLandmarks()
+
+  It returns 2D coordinates (x, y) for each img left hand landmark. Note that it will also return a z coordinate which is -1 and score (visibility) also -1, thus ought to be ignored. The msg type is MediapipePointInfoArray. It requires the mediapipe holistic node to be running.
+
+
+- getHipLength()
+
+  It returns the hip length. The msg type is Float32. It requires the mediapipe holistic node to be running.
+
+- getTorsoLength()
+
+  It returns the torso length. The msg type is Float32. It requires the mediapipe holistic node to be running.
+
+- getShoulderLength()
+
+  It returns the shouler length. The msg type is Float32. It requires the mediapipe holistic node to be running.
+
+- getRightArmLength()
+
+  It returns the right arm length. The msg type is Float32. It requires the mediapipe holistic node to be running.
+
+- getLeftArmLength()
+
+  It returns the left arm length. The msg type is Float32. It requires the mediapipe holistic node to be running.
 

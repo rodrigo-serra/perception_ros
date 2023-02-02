@@ -522,7 +522,7 @@ def main():
 
     n_percep = Perception()
     
-    obj = n_percep.detectPointingObject()
+    obj = n_percep.getLeftHandLandmarks()
     rospy.loginfo(obj)
     return obj
 
