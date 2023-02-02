@@ -10,6 +10,7 @@ from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
 from darknet_ros_py.msg import RecognizedObjectArrayStamped
 from perception_tests.msg import MediapipePointInfo, MediapipePointInfoArray
+from perception_tests.msg import StringArray
 from sympy import Point, Polygon, Line
 
 # from mbot_perception_msgs.msg import TrackedObject3DList, TrackedObject3D, RecognizedObject3DList, RecognizedObject3D
@@ -47,6 +48,9 @@ class Perception():
         self.__torsoLength = None
         self.__rightArmLength = None
         self.__leftArmLength = None
+
+        self.__peopleDetection = None
+        self.__peopleDetectionRecord = None
         
         self.__detectedObjects = []
      
@@ -358,6 +362,28 @@ class Perception():
 
         self.__leftArmLength = data.data
         return self.__leftArmLength
+
+
+    def getPeopleDetection(self):
+        peopleDetection_topic = "/perception/reid/current_detection"
+        try:
+            data = rospy.wait_for_message(peopleDetection_topic, StringArray, timeout = self.__timeout)
+        except:
+            rospy.logerr("Could not get People Detection!")
+
+        self.__peopleDetection = data.strArr
+        return self.__peopleDetection
+    
+    
+    def getPeopleDetectionRecord(self):
+        peopleDetectionRecord_topic = "/perception/reid/detection_record"
+        try:
+            data = rospy.wait_for_message(peopleDetectionRecord_topic, StringArray, timeout = self.__timeout)
+        except:
+            rospy.logerr("Could not get People Detection Record!")
+
+        self.__peopleDetectionRecord = data.strArr
+        return self.__peopleDetectionRecord
     
 
     # def __trackCallback(self,data):
@@ -522,7 +548,7 @@ def main():
 
     n_percep = Perception()
     
-    obj = n_percep.getLeftHandLandmarks()
+    obj = n_percep.getPeopleDetection()
     rospy.loginfo(obj)
     return obj
 

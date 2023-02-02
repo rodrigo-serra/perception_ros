@@ -218,3 +218,10 @@ The API has the follwing actions:
 
   It returns the left arm length. The msg type is Float32. It requires the mediapipe holistic node to be running.
 
+- getPeopleDetection()
+
+  It returns an array with all the persons detected in the current frame. The msg type is StringArray. It requires the reid node to be running.
+
+- getPeopleDetectionRecord()
+
+  It returns an array with all the persons detected in the past. The msg type is StringArray. It requires the reid node to be running.
