@@ -35,7 +35,7 @@ class Reid:
         self.ctr = True
         self.detector = holisticDetector()
         self.cropOffset = 50
-        self.currentEvent = None
+        self.currentEvent = "e_stop"
         self.takePhoto = False
         self.runAutomatic = False
         self.bridge = CvBridge()
@@ -70,29 +70,29 @@ class Reid:
     def run(self):
         while not rospy.is_shutdown():
             if self.currentEvent is not None:
-                if self.currentEvent == "take_photo":
+                if self.currentEvent == "e_take_photo":
                     self.takePhoto = True
                     self.currentEvent = None
                     rospy.loginfo("Taking photo to unknow person!")
 
-                if self.currentEvent == "enable_automatic":
+                if self.currentEvent == "e_enable_automatic":
                     self.runAutomatic = True
                     self.currentEvent = None
                     rospy.loginfo("Enabling automatic mode!")
 
-                if self.currentEvent == "disable_automatic":
+                if self.currentEvent == "e_disable_automatic":
                     self.runAutomatic = False
                     self.currentEvent = None
                     rospy.loginfo("Disabling automatic mode!")
 
-                if self.currentEvent == "stop":
+                if self.currentEvent == "e_stop":
                     self.currentEvent = None
                     self.img = None
                     self.image_sub.unregister()
                     cv2.destroyAllWindows()
                     rospy.loginfo("Stopping detection!")
 
-                if self.currentEvent == "start":
+                if self.currentEvent == "e_start":
                     self.currentEvent = None
                     if self.readImgCompressed:
                         self.image_sub = rospy.Subscriber(self.camera_topic, CompressedImage, self.imgCallback)
@@ -100,7 +100,7 @@ class Reid:
                         self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
                     rospy.loginfo("Starting detection!")
 
-                if self.currentEvent == "reset":
+                if self.currentEvent == "e_reset":
                     self.deleteAllImgs()
                     self.img = None
                     self.personCounter = 0

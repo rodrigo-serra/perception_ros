@@ -57,9 +57,9 @@ Regarding topics, the node subscribes to the topic **event_in** which can take a
 ```
 
 Depending on the msg, the node will behave differently. The options are the following:
-- **stop**, it stops the node from publishing any results. If "visualization" is set to true, it will close the visualization window;
-- **start**, restarts publishing and relaunches the visualization window if the "visualization" is set to true;
-- **reset**, resets the node using default options;
+- **e_stop**, it stops the node from publishing any results. If "visualization" is set to true, it will close the visualization window;
+- **e_start**, restarts publishing and relaunches the visualization window if the "visualization" is set to true;
+- **e_reset**, resets the node using default options;
 
 The node also publishes the mediapipe holistic results and some extra information one can extract from the latter. The topics are the following:
 
@@ -122,12 +122,12 @@ Regarding topics, the node subscribes to the topic **event_in** which can take a
 ```
 
 Depending on the msg, the node will behave differently. The options are the following:
-- **take_photo**, it takes a photo of the person or persons currently being detected;
-- **enable_automatic**, it activates the automatic mode where for each new person detected, it automatically takes a photo and adds them to the detection record;
-- **disable_automatic**, it deactivates the automatic mode;
-- **stop**, it stops the node from publishing any results. If "visualization" is set to true, it will close the visualization window;
-- **start**, restarts publishing and relaunches the visualization window if the "visualization" is set to true;
-- **reset**, resets the node using default options;
+- **e_take_photo**, it takes a photo of the person or persons currently being detected;
+- **e_enable_automatic**, it activates the automatic mode where for each new person detected, it automatically takes a photo and adds them to the detection record;
+- **e_disable_automatic**, it deactivates the automatic mode;
+- **e_stop**, it stops the node from publishing any results. If "visualization" is set to true, it will close the visualization window;
+- **e_start**, restarts publishing and relaunches the visualization window if the "visualization" is set to true;
+- **e_reset**, resets the node using default options;
 
 The node also publishes other information regarding the person or persons detected and the detection record. The topics are the following:
 

@@ -29,7 +29,7 @@ class MediapipeHolistic:
         self.img = None
         self.ctr = True
         self.detector = holisticDetector()
-        self.currentEvent = None
+        self.currentEvent = "e_stop"
         self.bridge = CvBridge()
 
         # Read from ROS Param
@@ -98,14 +98,14 @@ class MediapipeHolistic:
     def run(self):
         while not rospy.is_shutdown():
             if self.currentEvent is not None:
-                if self.currentEvent == "stop":
+                if self.currentEvent == "e_stop":
                     self.currentEvent = None
                     self.img = None
                     self.image_sub.unregister()
                     cv2.destroyAllWindows()
                     rospy.loginfo("Stopping detection!")
 
-                if self.currentEvent == "start":
+                if self.currentEvent == "e_start":
                     self.currentEvent = None
                     if self.readImgCompressed:
                         self.image_sub = rospy.Subscriber(self.camera_topic, CompressedImage, self.imgCallback)
@@ -113,7 +113,7 @@ class MediapipeHolistic:
                         self.image_sub = rospy.Subscriber(self.camera_topic, Image, self.imgCallback)
                     rospy.loginfo("Starting detection!")
 
-                if self.currentEvent == "reset":
+                if self.currentEvent == "e_reset":
                     self.img = None
                     self.ctr = True
                     self.detector = holisticDetector()

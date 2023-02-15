@@ -22,7 +22,7 @@
   <arg name="extract_face_boundary_only" default="true" />
 
   <!-- Launch Reid Node -->
-  <node ns="perception" name="reid" pkg="perception_tests" type="reidnode.py" output="log">
+  <node ns="perception" name="reid" pkg="perception_tests" type="reidnode.py" output="screen">
     <param name="camera_topic" value="$(arg camera_topic)" type="string"/>
     <param name="img_compressed" value="$(arg img_compressed)" type="bool"/>
     <param name="visualization" value="$(arg visualization)" type="bool"/>
