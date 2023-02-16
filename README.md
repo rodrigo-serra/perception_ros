@@ -225,3 +225,45 @@ The API has the follwing actions:
 - getPeopleDetectionRecord()
 
   It returns an array with all the persons detected in the past. The msg type is StringArray. It requires the reid node to be running.
+
+- startReid()
+
+  It starts the Reid node.
+
+- stopReid()
+
+  It stops the Reid node.
+
+- resetReid()
+
+  It resets the Reid node.
+
+- takePhotoReid()
+
+  Meant to take a photo of a person and added to the detection record.
+
+
+- enableAutomaticReid()
+
+  Activates automatic reid, i.e., every time a new person is detected, the node will capture a photo and added it to the detection record.
+
+
+.- disableAutomaticReid()
+
+  Disables automatic reid.
+
+
+ - startMediapipeHolistic()
+
+  It starts the Mediapipe holistic node.
+
+
+ - stopMediapipeHolistic()
+
+  It stops the Mediapipe holistic node.
+
+
+ - resetMediapipeHolistic()
+
+
+  It resets the Mediapipe holistic node.

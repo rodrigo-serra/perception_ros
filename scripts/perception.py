@@ -384,7 +384,60 @@ class Perception():
 
         self.__peopleDetectionRecord = data.strArr
         return self.__peopleDetectionRecord
+
+
+    def ___eventIn(self, msg, option):
+        publishMsg = True
+        if option == "reid":
+            pub = rospy.Publisher("/perception/reid/event_in", String, queue_size=10)
+        elif option == "mediapipe_holistic":
+            pub = rospy.Publisher("/perception/mediapipe_holistic/event_in", String, queue_size=10)
+        else:
+            publishMsg = False    
+        
+        rospy.sleep(1)
+        
+        if publishMsg:
+            e = String()
+            e.data = msg
+            pub.publish(e)
     
+    
+    def startReid(self):
+        self.___eventIn("e_start", "reid")
+    
+
+    def stopReid(self):
+        self.___eventIn("e_stop", "reid")
+    
+    
+    def resetReid(self):
+        self.___eventIn("e_reset", "reid")
+    
+    
+    def takePhotoReid(self):
+        self.___eventIn("e_take_photo", "reid")
+    
+    
+    def enableAutomaticReid(self):
+        self.___eventIn("e_enable_automatic", "reid")
+    
+    
+    def disableAutomaticReid(self):
+        self.___eventIn("e_disable_automatic", "reid")
+
+
+    def startMediapipeHolistic(self):
+        self.___eventIn("e_start", "mediapipe_holistic")
+
+    
+    def stopMediapipeHolistic(self):
+        self.___eventIn("e_stop", "mediapipe_holistic")
+    
+    
+    def resetMediapipeHolistic(self):
+        self.___eventIn("e_reset", "mediapipe_holistic")
+
 
     # def __trackCallback(self,data):
     #     self.tracked_objects = data
@@ -548,9 +601,11 @@ def main():
 
     n_percep = Perception()
     
-    obj = n_percep.getPeopleDetection()
-    rospy.loginfo(obj)
-    return obj
+    # obj = n_percep.getPeopleDetection()
+    # rospy.loginfo(obj)
+    # return obj
+
+    n_percep.resetMediapipeHolistic()
 
 # Main function
 if __name__ == '__main__':
