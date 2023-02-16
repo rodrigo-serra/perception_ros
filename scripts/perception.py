@@ -392,6 +392,8 @@ class Perception():
             pub = rospy.Publisher("/perception/reid/event_in", String, queue_size=10)
         elif option == "mediapipe_holistic":
             pub = rospy.Publisher("/perception/mediapipe_holistic/event_in", String, queue_size=10)
+        elif option == "detectron":
+            pub = rospy.Publisher("/detectron2_ros/event_in", String, queue_size=10)
         else:
             publishMsg = False    
         
@@ -437,6 +439,22 @@ class Perception():
     
     def resetMediapipeHolistic(self):
         self.___eventIn("e_reset", "mediapipe_holistic")
+
+
+    def startDetectron(self):    
+        self.___eventIn("e_start", "detectron")
+    
+
+    def startDetectronTopics(self):    
+        self.___eventIn("e_start_topics", "detectron")
+
+
+    def stopDetectron(self):    
+        self.___eventIn("e_stop", "detectron")
+    
+
+    def stopDetectronTopics(self):    
+        self.___eventIn("e_stop_topics", "detectron")
 
 
     # def __trackCallback(self,data):
@@ -601,11 +619,9 @@ def main():
 
     n_percep = Perception()
     
-    # obj = n_percep.getPeopleDetection()
-    # rospy.loginfo(obj)
-    # return obj
-
-    n_percep.resetMediapipeHolistic()
+    obj = n_percep.getPeopleDetection()
+    rospy.loginfo(obj)
+    return obj
 
 # Main function
 if __name__ == '__main__':

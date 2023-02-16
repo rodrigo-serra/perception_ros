@@ -228,42 +228,70 @@ The API has the follwing actions:
 
 - startReid()
 
-  It starts the Reid node.
+  It starts the Reid node. It requires the reid node to be running.
 
 - stopReid()
 
-  It stops the Reid node.
+  It stops the Reid node. It requires the reid node to be running.
 
 - resetReid()
 
-  It resets the Reid node.
+  It resets the Reid node. It requires the reid node to be running.
 
 - takePhotoReid()
 
-  Meant to take a photo of a person and added to the detection record.
+  Meant to take a photo of a person and added to the detection record. It requires the reid node to be running.
 
 
 - enableAutomaticReid()
 
-  Activates automatic reid, i.e., every time a new person is detected, the node will capture a photo and added it to the detection record.
+  Activates automatic reid, i.e., every time a new person is detected, the node will capture a photo and added it to the detection record. It requires the reid node to be running.
 
 
-.- disableAutomaticReid()
+- disableAutomaticReid()
 
-  Disables automatic reid.
+  Disables automatic reid. It requires the reid node to be running.
 
 
  - startMediapipeHolistic()
 
-  It starts the Mediapipe holistic node.
+    It starts the Mediapipe holistic node. It requires the mediapipe holistic node to be running.
 
 
  - stopMediapipeHolistic()
 
-  It stops the Mediapipe holistic node.
+    It stops the Mediapipe holistic node. It requires the mediapipe holistic node to be running.
 
 
  - resetMediapipeHolistic()
 
 
-  It resets the Mediapipe holistic node.
+    It resets the Mediapipe holistic node. It requires the mediapipe holistic node to be running.
+
+
+ - startDetectron()
+
+
+    It starts the detectron node and it loads the model. It requires the detectron node to be running.
+
+
+ - startDetectronTopics()
+
+
+    The node starts subscribing and publishing. It requires the detectron node to be running.
+
+
+ - stopDetectron()
+
+
+    It stops the detectron node and it deletes the model. It requires the detectron node to be running.
+
+
+ - stopDetectronTopics()
+
+
+    The node stops subscribing and publishing. It requires the detectron node to be running.
+
+
+
+
