@@ -49,6 +49,8 @@ class Perception():
         self.__rightArmLength = None
         self.__leftArmLength = None
 
+        self.__sweaterColor = None
+
         self.__peopleDetection = None
         self.__peopleDetectionRecord = None
         
@@ -385,6 +387,17 @@ class Perception():
         self.__peopleDetectionRecord = data.strArr
         return self.__peopleDetectionRecord
 
+    
+    def readSweaterColor(self):
+        sweaterColor_topic = "/perception/mediapipe_holistic/sweater_color"
+        try:
+            data = rospy.wait_for_message(sweaterColor_topic, String, timeout = self.__timeout)
+        except:
+            rospy.logerr("Could not get Sweater/T-shirt color!")
+
+        self.__sweaterColor = data.data
+        return self.__sweaterColor
+
 
     def ___eventIn(self, msg, option):
         publishMsg = True
@@ -619,9 +632,11 @@ def main():
 
     n_percep = Perception()
     
-    obj = n_percep.getPeopleDetection()
-    rospy.loginfo(obj)
-    return obj
+    # obj = n_percep.getPeopleDetection()
+    # rospy.loginfo(obj)
+    # return obj
+
+    rospy.loginfo(n_percep.readSweaterColor())
 
 # Main function
 if __name__ == '__main__':

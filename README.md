@@ -228,6 +228,10 @@ The API has the follwing actions:
 
   It returns an array with all the persons detected in the past. The msg type is StringArray. It requires the reid node to be running.
 
+- readSweaterColor()
+
+  It returns the estimated color of the person's sweater/t-shirt.
+
 - startReid()
 
   It starts the Reid node. It requires the reid node to be running.

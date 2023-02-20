@@ -333,7 +333,7 @@ class holisticDetector():
         return m, b, px, py, qx, qy
 
 
-    def readColor(self, img, pkg_path):
+    def readSweaterColor(self, img, pkg_path):
         mPoint = self.getMiddlePointImg(self.mpHolistic.PoseLandmark.LEFT_SHOULDER, self.mpHolistic.PoseLandmark.RIGHT_SHOULDER)
         if mPoint == -1:
             return False
@@ -365,19 +365,19 @@ class holisticDetector():
         # Apply Median or Average on region of insteres
         apply_median = True
         
-        blue = np.average(img_blue_channel)
-        if np.isnan(blue):
+        if np.all(img_blue_channel != img_blue_channel):
             return False
+        blue = np.average(img_blue_channel)
         blue = int(blue)
 
-        green = np.average(img_green_channel)
-        if np.isnan(green):
+        if np.all(img_green_channel != img_green_channel):
             return False
+        green = np.average(img_green_channel)
         green = int(green)
         
-        red = np.average(img_red_channel)
-        if np.isnan(red):
+        if np.all(img_red_channel != img_red_channel):
             return False
+        red = np.average(img_red_channel)
         red = int(red)
 
         if apply_median:
