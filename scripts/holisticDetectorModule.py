@@ -338,10 +338,18 @@ class holisticDetector():
         if mPoint == -1:
             return False
 
+        # Select a point a little bit below mPoint
         mPoint[1] += 50
         
-        offset = 20
+        # Change contrast and brightness to enhance colors
+        # Contrast control
+        alpha = 1.5
+        # Brightness control
+        beta = 10
+        img = cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
 
+        # Select region of interest
+        offset = 20
         cx_left = mPoint[0] - offset
         cx_right = mPoint[0] + offset
 
@@ -354,22 +362,31 @@ class holisticDetector():
         img_green_channel = img[cx_left:cx_right, cy_top:cy_bottom, 1]
         img_red_channel = img[cx_left:cx_right, cy_top:cy_bottom, 2]
 
-        blue_avg = np.average(img_blue_channel)
-        if np.isnan(blue_avg):
-            return False
-        blue_avg = int(blue_avg)
-
-        green_avg = np.average(img_green_channel)
-        if np.isnan(green_avg):
-            return False
-        green_avg = int(green_avg)
+        # Apply Median or Average on region of insteres
+        apply_median = True
         
-        red_avg = np.average(img_red_channel)
-        if np.isnan(red_avg):
+        blue = np.average(img_blue_channel)
+        if np.isnan(blue):
             return False
-        red_avg = int(red_avg)
+        blue = int(blue)
 
-        color_name = self.getColorName(pkg_path, red_avg, green_avg, blue_avg)
+        green = np.average(img_green_channel)
+        if np.isnan(green):
+            return False
+        green = int(green)
+        
+        red = np.average(img_red_channel)
+        if np.isnan(red):
+            return False
+        red = int(red)
+
+        if apply_median:
+            blue = int(np.median(img_blue_channel))
+            green = int(np.median(img_green_channel))
+            red = int(np.median(img_red_channel))
+
+        # Get Color
+        color_name = self.getColorName(pkg_path, red, green, blue)
         return color_name
 
     

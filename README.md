@@ -79,6 +79,8 @@ The node also publishes the mediapipe holistic results and some extra informatio
 /perception/mediapipe_holistic/hand_pointing_direction
 /perception/mediapipe_holistic/hand_pointing_intercept
 /perception/mediapipe_holistic/hand_pointing_slope
+
+/perception/mediapipe_holistic/sweater_color
 ```
 
 The topics with "landmarks" on its name return the 2D or 3D coordinates for each landmark given by the mediapipe holistic library. The data is published using a custom msg type called MediapipePointInfoArray. We recommend going through the mediapipe documentation <a href="https://google.github.io/mediapipe/solutions/holistic.html" target="_blank">mediapipe documentation</a> to understand the whole landmark structure.

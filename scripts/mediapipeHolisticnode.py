@@ -97,6 +97,9 @@ class MediapipeHolistic:
 
         # Publish Hand Poiting Direction - Direction
         self.mp_pointingDirectionHand_direction_pub = rospy.Publisher("~hand_pointing_direction", String, queue_size=10)
+    
+        # Publish Shirt/Sweater Color
+        self.mp_sweaterColor_pub = rospy.Publisher("~sweater_color", String, queue_size=10)
 
     def run(self):
         while not rospy.is_shutdown():
@@ -130,13 +133,6 @@ class MediapipeHolistic:
             if self.img is not None:
                 if self.ctr:
                     self.img = self.detector.find(self.img, self.drawPose, self.drawFace, self.drawRightHand, self.drawLeftHand)
-                    
-                    isFaceLandmarks = self.detector.getFaceLandmarks(self.img)
-                    if isFaceLandmarks:
-                        self.publishFaceCoordinates()
-                        if self.drawFaceBoundary:
-                            self.img = self.getFaceMask()
-
 
                     isPoseWorldLandmarks = self.detector.getPoseWorldLandmarks()
                     if isPoseWorldLandmarks:
@@ -178,7 +174,9 @@ class MediapipeHolistic:
                         self.mp_torsoLength_pub.publish(self.detector.getTorsoLength())
 
 
-                    rospy.logwarn(self.detector.readColor(self.img, self.directory))
+                    sweater_color = self.detector.readColor(self.img, self.directory)
+                    if sweater_color:
+                        self.mp_sweaterColor_pub.publish(sweater_color)
 
 
                     isPointingHand = self.detector.getPointingArm()
@@ -197,6 +195,13 @@ class MediapipeHolistic:
                                 self.mp_pointingDirectionHand_direction_pub.publish(self.pointingRightHandMsg)
 
 
+                    isFaceLandmarks = self.detector.getFaceLandmarks(self.img)
+                    if isFaceLandmarks:
+                        self.publishFaceCoordinates()
+                        if self.drawFaceBoundary:
+                            self.img = self.getFaceMask()
+                    
+                    
                     self.ctr = False
                     
 
