@@ -3,8 +3,8 @@
   <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch"/> -->
 
   <!-- Camera topic (Real Sense) -->
-  <!-- <arg name="camera_topic" default="/camera/color/image_raw" />
-  <arg name="img_compressed" default="false" /> -->
+  <arg name="camera_topic" default="/camera/color/image_raw" />
+  <arg name="img_compressed" default="false" />
 
   <!-- <arg name="camera_topic" default="/camera/color/image_raw/compressed" /> -->
    <!-- <arg name="img_compressed" default="true" /> -->
@@ -12,8 +12,8 @@
   <!-- <arg name="camera_topic" default="/xtion/rgb/image_raw/compressed" /> -->
   <!-- <arg name="img_compressed" default="true" /> -->
 
-  <arg name="camera_topic" default="/object_detector/detection_image/compressed" />
-  <arg name="img_compressed" default="true" />
+  <!-- <arg name="camera_topic" default="/object_detector/detection_image/compressed" />
+  <arg name="img_compressed" default="true" /> -->
 
 
   <!-- Visualization -->

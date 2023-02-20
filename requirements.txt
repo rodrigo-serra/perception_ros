@@ -3,3 +3,4 @@ scipy
 sympy
 mediapipe
 face_recognition
+pandas

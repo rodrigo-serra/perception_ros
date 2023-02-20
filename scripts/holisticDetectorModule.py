@@ -1,6 +1,8 @@
 import cv2
 import mediapipe as mp
 import math
+import numpy as np
+import pandas as pd
 
 class tridimensionalInfo():
     def __init__(self, x, y, z, visibility):
@@ -154,6 +156,12 @@ class holisticDetector():
         dy = math.pow(y1- y2, 2)
         dz = math.pow(z1 - z2, 2)
         return math.sqrt(dx + dy + dz)
+    
+
+    def distanceFormula2D(self, x1, y1, x2, y2):
+        dx = math.pow(x1 - x2, 2)
+        dy = math.pow(y1- y2, 2)
+        return math.sqrt(dx + dy)
 
 
     def getMiddlePoint(self, num1, num2):
@@ -162,6 +170,15 @@ class holisticDetector():
             y = (self.poseCoordinates[num1].y + self.poseCoordinates[num2].y) / 2
             z = (self.poseCoordinates[num1].z + self.poseCoordinates[num2].z) / 2
             return [x, y, z]
+        else:
+            return -1
+    
+    
+    def getMiddlePointImg(self, num1, num2):
+        if self.imgVisibilityCheck(num1) and self.imgVisibilityCheck(num2):
+            x = int((self.imgPoseCoordinates[num1].x + self.imgPoseCoordinates[num2].x) / 2)
+            y = int((self.imgPoseCoordinates[num1].y + self.imgPoseCoordinates[num2].y) / 2)
+            return [x, y]
         else:
             return -1
 
@@ -313,4 +330,60 @@ class holisticDetector():
             qx, qy = x1, h
 
 
-        return m, b, px, py, qx, qy 
+        return m, b, px, py, qx, qy
+
+
+    def readColor(self, img, pkg_path):
+        mPoint = self.getMiddlePointImg(self.mpHolistic.PoseLandmark.LEFT_SHOULDER, self.mpHolistic.PoseLandmark.RIGHT_SHOULDER)
+        if mPoint == -1:
+            return False
+
+        mPoint[1] += 50
+        
+        offset = 20
+
+        cx_left = mPoint[0] - offset
+        cx_right = mPoint[0] + offset
+
+        cy_top = mPoint[1] - offset
+        cy_bottom = mPoint[1] + offset
+
+        new_img = img[cx_left:cx_right, cy_top:cy_bottom, :]
+
+        img_blue_channel = img[cx_left:cx_right, cy_top:cy_bottom, 0]
+        img_green_channel = img[cx_left:cx_right, cy_top:cy_bottom, 1]
+        img_red_channel = img[cx_left:cx_right, cy_top:cy_bottom, 2]
+
+        blue_avg = np.average(img_blue_channel)
+        if np.isnan(blue_avg):
+            return False
+        blue_avg = int(blue_avg)
+
+        green_avg = np.average(img_green_channel)
+        if np.isnan(green_avg):
+            return False
+        green_avg = int(green_avg)
+        
+        red_avg = np.average(img_red_channel)
+        if np.isnan(red_avg):
+            return False
+        red_avg = int(red_avg)
+
+        color_name = self.getColorName(pkg_path, red_avg, green_avg, blue_avg)
+        return color_name
+
+    
+    def getColorName(self, pkg_path, R, G, B):
+        # Read CSV with color codes
+        file_name = pkg_path + "/files/basic_colors.csv"
+        index=["color","color_name","hex","R","G","B"]
+        csv = pd.read_csv(file_name, names=index, header=None)
+    
+        minimum = 10000
+        cname = ""
+        for i in range(len(csv)):
+            d = abs(R- int(csv.loc[i,"R"])) + abs(G- int(csv.loc[i,"G"]))+ abs(B- int(csv.loc[i,"B"]))
+            if(d<=minimum):
+                minimum = d
+                cname = csv.loc[i,"color_name"]
+        return cname
