@@ -3,6 +3,8 @@ import mediapipe as mp
 import math
 import numpy as np
 import pandas as pd
+from PIL import Image as IMG
+from PIL import ImageEnhance
 
 class tridimensionalInfo():
     def __init__(self, x, y, z, visibility):
@@ -341,12 +343,26 @@ class holisticDetector():
         # Select a point a little bit below mPoint
         mPoint[1] += 50
         
-        # Change contrast and brightness to enhance colors
-        # Contrast control
-        alpha = 1.5
-        # Brightness control
-        beta = 10
-        img = cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
+        # Change contrast and brightness
+        applyContrast = False
+        if applyContrast:
+            # Contrast control
+            alpha = 1.5
+            # Brightness control
+            beta = 10
+            img = cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
+
+
+        # Change saturation
+        applySaturation = True
+        if applySaturation:
+            color_coverted = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            pil_image = IMG.fromarray(color_coverted)
+            img = ImageEnhance.Color(pil_image)
+            img = img.enhance(4.0)
+            img = np.array(img)
+            img = img[:, :, ::-1].copy()  #Convert RGB to BGR 
+
 
         # Select region of interest
         offset = 20
@@ -362,7 +378,7 @@ class holisticDetector():
         img_green_channel = img[cx_left:cx_right, cy_top:cy_bottom, 1]
         img_red_channel = img[cx_left:cx_right, cy_top:cy_bottom, 2]
 
-        # Apply Median or Average on region of insteres
+        # Apply Median or Average on region of interest
         apply_median = True
         
         if np.all(img_blue_channel != img_blue_channel):
@@ -392,7 +408,7 @@ class holisticDetector():
     
     def getColorName(self, pkg_path, R, G, B):
         # Read CSV with color codes
-        file_name = pkg_path + "/files/basic_colors.csv"
+        file_name = pkg_path + "/files/basic_colors_simplified.csv"
         index=["color","color_name","hex","R","G","B"]
         csv = pd.read_csv(file_name, names=index, header=None)
     
