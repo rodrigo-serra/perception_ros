@@ -8,7 +8,7 @@ import os
 
 from std_msgs.msg import String
 from sensor_msgs.msg import Image, CompressedImage
-from perception_tests.msg import StringArray
+from perception_tests.msg import ReidInfo, ReidInfoArray
 from cv_bridge import CvBridge, CvBridgeError
 from PIL import Image as imgPil
 from facerecModule import *
@@ -27,8 +27,9 @@ class Reid:
 
         rospack = rospkg.RosPack()
 
-        # Variable Initialization
+        # Variable Initialization 
         self.directory = rospack.get_path('perception_tests') + '/images/'
+        self.models_directory = rospack.get_path('perception_tests') + '/models/'
         self.rate = rospy.Rate(10)
         self.img = None
         self.personCounter = 0
@@ -44,7 +45,28 @@ class Reid:
         # Create arrays of known face encodings and their names
         self.known_face_encodings = []
         self.known_face_names = []
-        
+        self.detection_record = []
+
+        # Model Params
+        self.faceProto = self.models_directory + "opencv_face_detector.pbtxt"
+        self.faceModel = self.models_directory + "opencv_face_detector_uint8.pb"
+
+        self.ageProto = self.models_directory + "age_deploy.prototxt"
+        self.ageModel = self.models_directory + "age_net.caffemodel"
+
+        self.genderProto = self.models_directory + "gender_deploy.prototxt"
+        self.genderModel = self.models_directory + "gender_net.caffemodel"
+
+        self.faceNet = cv2.dnn.readNet(self.faceModel, self.faceProto)
+        self.ageNet = cv2.dnn.readNet(self.ageModel, self.ageProto)
+        self.genderNet = cv2.dnn.readNet(self.genderModel, self.genderProto)
+
+        self.ageList = ['(0-2)', '(4-6)', '(8-12)', '(15-20)', '(25-32)', '(38-43)', '(48-53)', '(60-100)']
+        self.genderList = ['Male', 'Female']
+
+        self.MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
+
+        self.padding = 20
 
         # Read from ROS Param
         self.camera_topic = rospy.get_param("~camera_topic")
@@ -62,10 +84,10 @@ class Reid:
         self.event_sub = rospy.Subscriber("~event_in", String, self.eventCallback)
 
         # Publish Detected Faces
-        self.reid_pub = rospy.Publisher("~current_detection", StringArray, queue_size=10)
+        self.reid_pub = rospy.Publisher("~current_detection", ReidInfoArray, queue_size=10)
 
         # Publish Record of Detected Faces
-        self.reidRecord_pub = rospy.Publisher("~detection_record", StringArray, queue_size=10)
+        self.reidRecord_pub = rospy.Publisher("~detection_record", ReidInfoArray, queue_size=10)
 
     def run(self):
         while not rospy.is_shutdown():
@@ -119,6 +141,7 @@ class Reid:
                     # Create arrays of known face encodings and their names
                     self.known_face_encodings = []
                     self.known_face_names = []
+                    self.detection_record = []
                     
                     rospy.loginfo("Reseting!")
 
@@ -138,12 +161,12 @@ class Reid:
                         rospy.loginfo("No detections!")
 
                     if self.known_face_names != []:
-                        self.reidRecord_pub.publish(self.known_face_names)
+                        self.reidRecord_pub.publish(self.detection_record)
                     
                     self.ctr = False
                     
                 if self.draw:
-                    frame = drawRectangleAroundFace(self.img, face_locations, face_names)
+                    frame = drawRectangleAroundFace(self.img, res, self.extractFaceBoundaryOnly ,self.cropOffset)
                     cv2.imshow("RealSense", frame)
                     cv2.waitKey(1)
                     
@@ -177,16 +200,50 @@ class Reid:
     def lookIntoDetectPeopleHolistic(self, face_locations, face_names):
         detectionResult = []
         for (top, right, bottom, left), name in zip(face_locations, face_names):
+            d = ReidInfo()
+            
+            left -= self.cropOffset
+            top -= self.cropOffset
+            right += self.cropOffset
+            bottom += self.cropOffset
+
+            if top < 0 or bottom > self.img.shape[0] or left < 0 or right > self.img.shape[1]:
+                rospy.logwarn("Please move your face more towards the center!")
+                continue
+            
+            # Gender and Age Detection
+            face = self.img[top:bottom, left:right]
+            blob = cv2.dnn.blobFromImage(face, 1.0, (227,227), self.MODEL_MEAN_VALUES, swapRB=False)
+            
+            self.genderNet.setInput(blob)
+            genderPred = self.genderNet.forward()
+            gender = self.genderList[genderPred[0].argmax()]
+
+            self.ageNet.setInput(blob)
+            agePred = self.ageNet.forward()
+            age = self.ageList[agePred[0].argmax()]
+
+            d.id = name
+            if name == "Unknown":
+                d.gender = gender
+                d.ageRange = age
+            else:
+                for person in self.detection_record:
+                    if person.id == name:
+                        d.gender = person.gender
+                        d.ageRange = person.ageRange
+                        break
+            
+            d.top = top
+            d.bottom = bottom
+            d.left = left
+            d.right = right
+
             if (name == "Unknown" and self.takePhoto) or (name == "Unknown" and self.runAutomatic):
                 # Draw Mask
                 mask = np.zeros(self.img.shape[:2], dtype="uint8")
-                left -= self.cropOffset
-                top -= self.cropOffset
-                right += self.cropOffset
-                bottom += self.cropOffset
                 cv2.rectangle(mask, (left, top), (right, bottom), 255, -1)
                 img_masked = cv2.bitwise_and(self.img, self.img, mask=mask)
-
                 img_masked = self.detector.find(img_masked, False, False, False, False)
                 isFaceLandmarks = self.detector.getFaceLandmarks(img_masked)
 
@@ -202,13 +259,15 @@ class Reid:
                     faceEnconder = face_recognition.face_encodings(imageRGB)
                     if len(faceEnconder) > 0:
                         self.known_face_encodings.append(faceEnconder[0])
-                        self.known_face_names.append("H" + str(self.personCounter))
+                        d.id = "H" + str(self.personCounter)
+                        self.known_face_names.append(d.id)
+                        self.detection_record.append(d)
                         self.personCounter += 1
                         self.takePhoto = False
                         rospy.loginfo("Photo saved and added to enconder!")
            
             
-            detectionResult.append(name)
+            detectionResult.append(d)
         
         return detectionResult
 
@@ -216,8 +275,41 @@ class Reid:
     def lookIntoDetectPeople(self, face_locations, face_names):
         detectionResult = []
         for (top, right, bottom, left), name in zip(face_locations, face_names):
+            d = ReidInfo()
+
+            if top < 0 or bottom > self.img.shape[0] or left < 0 or right > self.img.shape[1]:
+                rospy.logwarn("Please move your face more towards the center!")
+                continue
+            
+            # Gender and Age Detection
+            face = self.img[top:bottom, left:right]
+            blob = cv2.dnn.blobFromImage(face, 1.0, (227,227), self.MODEL_MEAN_VALUES, swapRB=False)
+            
+            self.genderNet.setInput(blob)
+            genderPred = self.genderNet.forward()
+            gender = self.genderList[genderPred[0].argmax()]
+
+            self.ageNet.setInput(blob)
+            agePred = self.ageNet.forward()
+            age = self.ageList[agePred[0].argmax()]
+
+            d.id = name
+            if name == "Unknown":
+                d.gender = gender
+                d.ageRange = age
+            else:
+                for person in self.detection_record:
+                    if person.id == name:
+                        d.gender = person.gender
+                        d.ageRange = person.ageRange
+                        break
+            
+            d.top = top
+            d.bottom = bottom
+            d.left = left
+            d.right = right
+
             if (name == "Unknown" and self.takePhoto) or (name == "Unknown" and self.runAutomatic):
-                rospy.loginfo("Taking photo to unknow person!")
                 # Draw Mask
                 mask = np.zeros(self.img.shape[:2], dtype="uint8")
                 cv2.rectangle(mask, (left, top), (right, bottom), 255, -1)
@@ -233,13 +325,15 @@ class Reid:
                 faceEnconder = face_recognition.face_encodings(imageRGB)
                 if len(faceEnconder) > 0:
                     self.known_face_encodings.append(faceEnconder[0])
-                    self.known_face_names.append("H" + str(self.personCounter))
+                    d.id = "H" + str(self.personCounter)
+                    self.known_face_names.append(d.id)
+                    self.detection_record.append(d)
                     self.personCounter += 1
                     self.takePhoto = False
                     rospy.loginfo("Photo saved and added to enconder!")
             
             
-            detectionResult.append(name)
+            detectionResult.append(d)
         
         return detectionResult
 

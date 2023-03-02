@@ -4,16 +4,34 @@ import face_recognition
 
 
 # Inspired in https://github.com/ageitgey/face_recognition
-def drawRectangleAroundFace(frame, face_locations, face_names):
+def drawRectangleAroundFace(frame, current_detection, face_boundary, offset):
     # Display the results
-    for (top, right, bottom, left), name in zip(face_locations, face_names):
+    for d in current_detection:
+        if face_boundary:
+            top = d.top + offset
+            bottom = d.bottom - offset
+            left = d.left + offset
+            right = d.right - offset
+        else:
+            top = d.top
+            bottom = d.bottom
+            left = d.left
+            right = d.right
+        
+        name = d.id
+        gender = d.gender
+        age = d.ageRange
+
         # Draw a box around the face
         cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
 
         # Draw a label with a name below the face
-        cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
         font = cv2.FONT_HERSHEY_DUPLEX
-        cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
+        
+        # cv2.rectangle(frame, (left, bottom + 40), (right, bottom), (0, 0, 255), cv2.FILLED)
+        cv2.putText(frame, name, (left + 6, bottom + 20), font, 0.6, (0, 0, 255), 1)
+        cv2.putText(frame, gender, (left + 6, bottom + 40), font, 0.6, (0, 0, 255), 1)
+        cv2.putText(frame, age, (left + 6, bottom + 60), font, 0.6, (0, 0, 255), 1)
     
     return frame
 
