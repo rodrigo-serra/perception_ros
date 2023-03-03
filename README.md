@@ -138,7 +138,7 @@ The node also publishes other information regarding the person or persons detect
 /perception/reid/detection_record
 ```
 
-Both topics are published using a custom message (StringArray.msg). If the node does not recognize a person, it will display "Unknown". The detection record only keeps track of people whose photo was taken and added to the encoder.
+Both topics are published using a custom message (ReidInfoArray.msg). If the node does not recognize a person, it will display "Unknown". It will also estimate the gender and the age range of the person being detected. The detection record only keeps track of people whose photo was taken and added to the encoder.
 
 
 ## Perception API (perception.py)
@@ -222,11 +222,11 @@ The API has the follwing actions:
 
 - getPeopleDetection()
 
-  It returns an array with all the persons detected in the current frame. The msg type is StringArray. It requires the reid node to be running.
+  It returns an array with all the persons detected in the current frame. The msg type is ReidInfoArray. It requires the reid node to be running.
 
 - getPeopleDetectionRecord()
 
-  It returns an array with all the persons detected in the past. The msg type is StringArray. It requires the reid node to be running.
+  It returns an array with all the persons detected in the past. The msg type is ReidInfoArray. It requires the reid node to be running.
 
 - readSweaterColor()
 

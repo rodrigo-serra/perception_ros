@@ -10,7 +10,7 @@ from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
 from darknet_ros_py.msg import RecognizedObjectArrayStamped
 from perception_tests.msg import MediapipePointInfo, MediapipePointInfoArray
-from perception_tests.msg import StringArray
+from perception_tests.msg import ReidInfoArray
 from sympy import Point, Polygon, Line
 
 # from mbot_perception_msgs.msg import TrackedObject3DList, TrackedObject3D, RecognizedObject3DList, RecognizedObject3D
@@ -124,34 +124,33 @@ class Perception():
         pointingDirection_topic = "/perception/mediapipe_holistic/hand_pointing_direction"
         try:
             data = rospy.wait_for_message(pointingDirection_topic, String, timeout = self.__timeout)
+            self.__pointingDirection = data.data
+            return self.__pointingDirection
         except:
             rospy.logerr("Could not get Pointing Direction!")
-            exit(1)
 
-        self.__pointingDirection = data.data
-        return self.__pointingDirection
 
     
     def getPointingSlope(self):
         pointingSlope_topic = "/perception/mediapipe_holistic/hand_pointing_slope"
         try:
             data = rospy.wait_for_message(pointingSlope_topic, Float32, timeout = self.__timeout)
+            self.__pointingSlope = data.data
+            return self.__pointingSlope
         except:
             rospy.logerr("Could not get Slope of the Pointing Line Segment!")
 
-        self.__pointingSlope = data.data
-        return self.__pointingSlope
     
 
     def getPointingIntercept(self):
         pointingIntercept_topic = "/perception/mediapipe_holistic/hand_pointing_intercept"
         try:
             data = rospy.wait_for_message(pointingIntercept_topic, Float32, timeout = self.__timeout)
+            self.__pointingIntercept = data.data
+            return self.__pointingIntercept
         except:
             rospy.logerr("Could not get Intercept of the Pointing Line Segment!")
 
-        self.__pointingIntercept = data.data
-        return self.__pointingIntercept
 
     
     def __findObjectSimplifiedVersion(self):
@@ -161,7 +160,7 @@ class Perception():
             pointingRightMsg = rospy.get_param("/perception/mediapipe_holistic/pointing_right_hand_msg")
         except:
             rospy.logerr ("Mediapipe node must be running!")
-            exit(1)
+            return None
 
         
         if self.__pointingDirection != None:
@@ -260,143 +259,143 @@ class Perception():
         poseWorldLandmarks_topic = "/perception/mediapipe_holistic/pose_world_landmarks"
         try:
             data = rospy.wait_for_message(poseWorldLandmarks_topic, MediapipePointInfoArray, timeout = self.__timeout)
+            self.__poseWorldLandmarks = data
+            return self.__poseWorldLandmarks
         except:
             rospy.logerr("Could not get Pose World Landmarks!")
 
-        self.__poseWorldLandmarks = data
-        return self.__poseWorldLandmarks
 
 
     def getFaceLandmarks(self):
         faceLandmarks_topic = "/perception/mediapipe_holistic/face_landmarks"
         try:
             data = rospy.wait_for_message(faceLandmarks_topic, MediapipePointInfoArray, timeout = self.__timeout)
+            self.__faceLandmarks = data
+            return self.__faceLandmarks
         except:
             rospy.logerr("Could not get Face Landmarks!")
 
-        self.__faceLandmarks = data
-        return self.__faceLandmarks
 
 
     def getImgPoseLandmarks(self):
         imgPoseLandmarks_topic = "/perception/mediapipe_holistic/img_pose_landmarks"
         try:
             data = rospy.wait_for_message(imgPoseLandmarks_topic, MediapipePointInfoArray, timeout = self.__timeout)
+            self.__imgPoseLandmarks = data
+            return self.__imgPoseLandmarks
         except:
             rospy.logerr("Could not get Img Pose Landmarks!")
 
-        self.__imgPoseLandmarks = data
-        return self.__imgPoseLandmarks
 
     
     def getRightHandLandmarks(self):
         rightHandLandmarks_topic = "/perception/mediapipe_holistic/right_hand_landmarks"
         try:
             data = rospy.wait_for_message(rightHandLandmarks_topic, MediapipePointInfoArray, timeout = self.__timeout)
+            self.__rightHandLandmarks = data
+            return self.__rightHandLandmarks
         except:
             rospy.logerr("Could not get Right Hand Landmarks!")
 
-        self.__rightHandLandmarks = data
-        return self.__rightHandLandmarks
 
 
     def getLeftHandLandmarks(self):
         leftHandLandmarks_topic = "/perception/mediapipe_holistic/left_hand_landmarks"
         try:
             data = rospy.wait_for_message(leftHandLandmarks_topic, MediapipePointInfoArray, timeout = self.__timeout)
+            self.__leftHandLandmarks = data
+            return self.__leftHandLandmarks
         except:
             rospy.logerr("Could not get Left Hand Landmarks!")
 
-        self.__leftHandLandmarks = data
-        return self.__leftHandLandmarks
 
 
     def getHipLength(self):
         hipLength_topic = "/perception/mediapipe_holistic/hip_length"
         try:
             data = rospy.wait_for_message(hipLength_topic, Float32, timeout = self.__timeout)
+            self.__hipLength = data.data
+            return self.__hipLength
         except:
             rospy.logerr("Could not get Hip Length!")
 
-        self.__hipLength = data.data
-        return self.__hipLength
 
     
     def getTorsoLength(self):
         torsoLength_topic = "/perception/mediapipe_holistic/torso_length"
         try:
             data = rospy.wait_for_message(torsoLength_topic, Float32, timeout = self.__timeout)
+            self.__torsoLength = data.data
+            return self.__torsoLength
         except:
             rospy.logerr("Could not get Torso Length!")
 
-        self.__torsoLength = data.data
-        return self.__torsoLength
    
    
     def getShoulderLength(self):
         shoulderLength_topic = "/perception/mediapipe_holistic/shoulder_length"
         try:
             data = rospy.wait_for_message(shoulderLength_topic, Float32, timeout = self.__timeout)
+            self.__shoulderLength = data.data
+            return self.__shoulderLength
         except:
             rospy.logerr("Could not get Shoulder Length!")
 
-        self.__shoulderLength = data.data
-        return self.__shoulderLength
     
     
     def getRightArmLength(self):
         rightArmLength_topic = "/perception/mediapipe_holistic/right_arm_length"
         try:
             data = rospy.wait_for_message(rightArmLength_topic, Float32, timeout = self.__timeout)
+            self.__rigthArmLength = data.data
+            return self.__rigthArmLength
         except:
             rospy.logerr("Could not get Right Arm Length!")
 
-        self.__rigthArmLength = data.data
-        return self.__rigthArmLength
     
     
     def getLeftArmLength(self):
         leftArmLength_topic = "/perception/mediapipe_holistic/left_arm_length"
         try:
             data = rospy.wait_for_message(leftArmLength_topic, Float32, timeout = self.__timeout)
+            self.__leftArmLength = data.data
+            return self.__leftArmLength
         except:
             rospy.logerr("Could not get Left Arm Length!")
 
-        self.__leftArmLength = data.data
-        return self.__leftArmLength
 
 
     def getPeopleDetection(self):
         peopleDetection_topic = "/perception/reid/current_detection"
         try:
-            data = rospy.wait_for_message(peopleDetection_topic, StringArray, timeout = self.__timeout)
+            data = rospy.wait_for_message(peopleDetection_topic, ReidInfoArray, timeout = self.__timeout)
+            self.__peopleDetection = data.reidArr
+            return self.__peopleDetection
         except:
             rospy.logerr("Could not get People Detection!")
 
-        self.__peopleDetection = data.strArr
-        return self.__peopleDetection
     
     
     def getPeopleDetectionRecord(self):
         peopleDetectionRecord_topic = "/perception/reid/detection_record"
         try:
-            data = rospy.wait_for_message(peopleDetectionRecord_topic, StringArray, timeout = self.__timeout)
+            data = rospy.wait_for_message(peopleDetectionRecord_topic, ReidInfoArray, timeout = self.__timeout)
+            self.__peopleDetectionRecord = data.reidArr
+            return self.__peopleDetectionRecord
         except:
             rospy.logerr("Could not get People Detection Record!")
 
-        self.__peopleDetectionRecord = data.strArr
-        return self.__peopleDetectionRecord
 
     
     def readSweaterColor(self):
         sweaterColor_topic = "/perception/mediapipe_holistic/sweater_color"
         try:
             data = rospy.wait_for_message(sweaterColor_topic, String, timeout = self.__timeout)
+            self.__sweaterColor = data.data
+            return self.__sweaterColor
         except:
             rospy.logerr("Could not get Sweater/T-shirt color!")
 
-        self.__sweaterColor = data.data
-        return self.__sweaterColor
 
 
     def ___eventIn(self, msg, option):
@@ -632,11 +631,11 @@ def main():
 
     n_percep = Perception()
     
-    # obj = n_percep.getPeopleDetection()
-    # rospy.loginfo(obj)
-    # return obj
+    obj = n_percep.getPeopleDetectionRecord()
+    rospy.loginfo(obj)
+    return obj
 
-    rospy.loginfo(n_percep.readSweaterColor())
+    # rospy.loginfo(n_percep.readSweaterColor())
 
 # Main function
 if __name__ == '__main__':
