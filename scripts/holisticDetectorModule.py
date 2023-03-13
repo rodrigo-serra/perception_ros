@@ -6,6 +6,7 @@ import pandas as pd
 from PIL import Image as IMG
 from PIL import ImageEnhance
 
+
 class tridimensionalInfo():
     def __init__(self, x, y, z, visibility):
         self.x = x
@@ -29,6 +30,7 @@ class holisticDetector():
         self.handDistanceToBodyThreshold = 0.3
         self.rightHandReturnMsg = "Right Hand"
         self.leftHandReturnMsg = "Left Hand"
+
 
     def find(self, img, pose, face, rightHand, leftHand):
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -333,7 +335,6 @@ class holisticDetector():
 
 
         return m, b, px, py, qx, qy
-
 
     def readSweaterColor(self, img, pkg_path):
         mPoint = self.getMiddlePointImg(self.mpHolistic.PoseLandmark.LEFT_SHOULDER, self.mpHolistic.PoseLandmark.RIGHT_SHOULDER)

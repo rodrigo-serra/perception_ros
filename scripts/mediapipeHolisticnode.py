@@ -174,9 +174,9 @@ class MediapipeHolistic:
                         self.mp_torsoLength_pub.publish(self.detector.getTorsoLength())
 
 
-                    sweater_color = self.detector.readSweaterColor(self.img, self.directory)
-                    if sweater_color:
-                        self.mp_sweaterColor_pub.publish(sweater_color)
+                    # sweater_color = self.detector.readSweaterColor(self.img, self.directory)
+                    # if sweater_color:
+                    #     self.mp_sweaterColor_pub.publish(sweater_color)
 
 
                     isPointingHand = self.detector.getPointingArm()
