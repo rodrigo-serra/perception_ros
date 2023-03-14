@@ -187,18 +187,18 @@ class holisticDetector():
             return -1
 
     
-    def getArmLenght(self, num1, num2, num3):
-        arm_1 = self.distanceBetweenPoints(num1, num2)
-        arm_2 = self.distanceBetweenPoints(num2, num3)
+    def getLength(self, num1, num2, num3):
+        dis_1 = self.distanceBetweenPoints(num1, num2)
+        dis_2 = self.distanceBetweenPoints(num2, num3)
 
-        if arm_1 != -1 and arm_2!= -1:
-            return arm_1 + arm_2
+        if dis_1 != -1 and dis_2!= -1:
+            return dis_1 + dis_2
         else:
             return -1
 
     
     def getRightArmLength(self):
-        rightArmLength = self.getArmLenght(self.mpHolistic.PoseLandmark.RIGHT_SHOULDER, self.mpHolistic.PoseLandmark.RIGHT_ELBOW, self.mpHolistic.PoseLandmark.RIGHT_WRIST)
+        rightArmLength = self.getLength(self.mpHolistic.PoseLandmark.RIGHT_SHOULDER, self.mpHolistic.PoseLandmark.RIGHT_ELBOW, self.mpHolistic.PoseLandmark.RIGHT_WRIST)
         if rightArmLength != -1:
             return rightArmLength
         else:
@@ -206,7 +206,7 @@ class holisticDetector():
 
 
     def getLeftArmLength(self):
-        leftArmLength = self.getArmLenght(self.mpHolistic.PoseLandmark.LEFT_SHOULDER, self.mpHolistic.PoseLandmark.LEFT_ELBOW, self.mpHolistic.PoseLandmark.LEFT_WRIST)
+        leftArmLength = self.getLength(self.mpHolistic.PoseLandmark.LEFT_SHOULDER, self.mpHolistic.PoseLandmark.LEFT_ELBOW, self.mpHolistic.PoseLandmark.LEFT_WRIST)
         if leftArmLength != -1:
             return leftArmLength
         else:
@@ -245,7 +245,7 @@ class holisticDetector():
             return torsoLen
         else:
             return False
-
+        
 
     def getPointingArm(self):
         rightHandDistanceToBody = self.distanceBetweenPoints(self.mpHolistic.PoseLandmark.RIGHT_HIP, self.mpHolistic.PoseLandmark.RIGHT_WRIST)

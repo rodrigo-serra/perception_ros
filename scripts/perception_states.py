@@ -16,34 +16,33 @@ class DetectPointingDirection(smach.State):
     '''
     description: it returns the direction someone is pointing at
     input: 
-    outcomes: 'success' or 'failure'
+    outcomes: 'left', 'right' or 'failure'
     '''
 
     def __init__(self):
-        smach.State.__init__(self, outcomes=['success', 'failure'], input_keys=['in_data'])
-        print("DetectPointingDirection init")
+        smach.State.__init__(self, outcomes=['left', 'right','failure'], input_keys=['in_data'])
 
     def execute(self,userdata):
         pointingDirection = perception_object.getPointingDirection()
 
-        if pointingDirection:
-            rospy.loginfo("Pointing to the " + pointingDirection)
-            return 'success'
+        if pointingDirection == 'left':
+            return 'left'
+        elif pointingDirection == 'right':
+            return 'right'
         else: 
             return 'failure'
 
 
-class RequestPointToBag(smach.State):
+class PrintMsg(smach.State):
     '''
-    description: it requests someone to point to a bag
+    description: it prints a msg
     input: 
     outcomes: 'success' or 'failure'
     '''
 
-    def __init__(self):
+    def __init__(self, msg):
         smach.State.__init__(self, outcomes=['success', 'failure'], input_keys=['in_data'])
-        self.msg = "Please point to one of the bags"
-        print("RequestPointToBag init")
+        self.msg = msg
 
     def execute(self,userdata):
         try:
@@ -61,8 +60,13 @@ if __name__ == '__main__':
     # Open the container
     with sm:
         #Add states to the container
-        smach.StateMachine.add('RequestPointToBag', RequestPointToBag(), transitions={'success': 'DetectPointingDirection', 'failure': 'RequestPointToBag'})
-        smach.StateMachine.add('DetectPointingDirection', DetectPointingDirection(), transitions={'success': 'success', 'failure': 'RequestPointToBag'})
+        smach.StateMachine.add('TIAGO_INFO_INTRO', PrintMsg("Please point to one of the bags"), transitions={'success': 'POINTING_DIRECTION_PERSON', 'failure': 'TIAGO_INFO_INTRO'})
+        
+        smach.StateMachine.add('POINTING_DIRECTION_PERSON', DetectPointingDirection(), transitions={'left': 'TIAGO_SAY_LEFT', 'right': 'TIAGO_SAY_RIGHT', 'failure': 'TIAGO_SAY_FAILURE'})
+
+        smach.StateMachine.add('TIAGO_SAY_LEFT', PrintMsg("You are pointing to the bag at the left"), transitions={'success': 'success', 'failure': 'TIAGO_SAY_FAILURE'})
+        smach.StateMachine.add('TIAGO_SAY_RIGHT', PrintMsg("You are pointing to the bag at the right"), transitions={'success': 'success', 'failure': 'TIAGO_SAY_FAILURE'})
+        smach.StateMachine.add('TIAGO_SAY_FAILURE', PrintMsg("Could not get pointing direction. Let's do it again"), transitions={'success': 'TIAGO_INFO_INTRO', 'failure': 'TIAGO_SAY_FAILURE'})
 
     # Execute SMACH plan
     outcome = sm.execute()
