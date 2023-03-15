@@ -57,7 +57,7 @@ class Perception():
         self.__detectedObjects = []
      
 
-    def detectPointingObject(self, useYolo = True, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
+    def detectPointingObject(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
         self.__detectedObjects = self.returnDetectedObjects()
         if easyDetection:
             self.getPointingDirection()
@@ -74,7 +74,7 @@ class Perception():
                 return self.__findClosestObjectToLine()
 
 
-    def returnDetectedObjects(self, useYolo = True, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
+    def returnDetectedObjects(self, useYolo = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
         dObjects = []
         detectedObjects_topic = "/detectron2_ros/result_yolo_msg"
         if useYolo == True:
@@ -98,7 +98,7 @@ class Perception():
 
 
     def getObjectNames(self):
-        objs = self.returnDetectedObjects(self, useFilteredObjects = False)
+        objs = self.returnDetectedObjects(useYolo = False, useFilteredObjects = False)
         if len(objs) == 0:
             rospy.logerr("Could not get objects!")
             return
