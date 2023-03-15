@@ -165,6 +165,10 @@ The API has the follwing actions:
   
   When the useFilteredObjects input parameter is true, the node will look at objects whose class is given by the classNameToBeDetected input parameter and whose score (confidence) is above the threshold. 
 
+- getObjectNames()
+
+  It returns the detected objects class names. 
+
 
 - getPointingDirection()
 
