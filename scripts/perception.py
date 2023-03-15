@@ -97,6 +97,18 @@ class Perception():
         return dObjects
 
 
+    def getObjectNames(self):
+        objs = self.returnDetectedObjects(self, useFilteredObjects = False)
+        if len(objs) == 0:
+            rospy.logerr("Could not get objects!")
+            return
+        else:
+            objs_class_names = []
+            for obj in objs:
+                objs_class_names.append(obj.class_name)
+            return objs_class_names
+
+
     def __getImg(self, useYolo):
         bridge = CvBridge()
         camera_topic = "/camera/color/image_raw"
@@ -397,7 +409,6 @@ class Perception():
             rospy.logerr("Could not get Sweater/T-shirt color!")
 
 
-
     def ___eventIn(self, msg, option):
         publishMsg = True
         if option == "reid":
@@ -631,7 +642,7 @@ def main():
 
     n_percep = Perception()
     
-    obj = n_percep.getPeopleDetectionRecord()
+    obj = n_percep.getObjectNames()
     rospy.loginfo(obj)
     return obj
 
