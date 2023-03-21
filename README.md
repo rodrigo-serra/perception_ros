@@ -156,7 +156,7 @@ The API has the follwing actions:
 
 - detectPointingObject(useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5)
   
-  This action returns the object someone is pointing at. It requires the mediapipe holistic node to be running and the Detectron or YOLO nodes. The first provides the measurements needed for the pointing direction, and the second the information regarding object detection. The msg type is RecognizedObjectArrayStamped.
+  This action returns the object someone is pointing at. It requires the mediapipe holistic node to be running and the Detectron or YOLO nodes. The first provides the measurements needed for the pointing direction, and the second the information regarding object detection. The msg type is RecognizedObject.
 
   It takes five parameters as inputs. The yolo parameter tells the node to subscribe to the YOLO or to the Detectron results. 
   

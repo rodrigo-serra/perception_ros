@@ -9,9 +9,12 @@ from std_msgs.msg import String, Float32
 from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
 from darknet_ros_py.msg import RecognizedObjectArrayStamped
+from detectron2_ros.msg import Result, RecognizedObjectCustom
 from perception_tests.msg import MediapipePointInfo, MediapipePointInfoArray
 from perception_tests.msg import ReidInfoArray
 from sympy import Point, Polygon, Line
+
+import message_filters
 
 # from mbot_perception_msgs.msg import TrackedObject3DList, TrackedObject3D, RecognizedObject3DList, RecognizedObject3D
 # from mbot_perception_msgs.srv import DeleteObject3D, DeleteObject3DRequest
@@ -55,10 +58,86 @@ class Perception():
         self.__peopleDetectionRecord = None
         
         self.__detectedObjects = []
+        self.__detectedObjectsDetectronMsg = None
+        
+        self.__detectronMsgType = None
+        self.__yoloMsgType = None
+        
+        self.__readDetectronMsgs = False
      
 
-    def detectPointingObject(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
-        self.__detectedObjects = self.returnDetectedObjects()
+    def detectPointingObject(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'bag', score = 0.5):
+        """
+        This action returns the object someone is pointing at. It requires the mediapipe holistic node to be running and the Detectron or YOLO nodes. The msg type is RecognizedObject.
+        
+        :param useYolo: (bool) It tells which object detector should we subsribe to. If set to True, subscribes to YOLO otherwise uses Detectron.
+        :param easyDetection: (bool) If set to true, it focuses on the arm direction to determine the pointing direction. Then it selects the object farthest left or farthest right accordingly. 
+                                    This approach works under the assumption that the useFilteredObjects is also set to true and that we are choosing between two objects. 
+                                    If set to false, it finds which object gets intercepted by the pointing line segment and returns that object. If no object is detected, it returns the one closest to the line.
+        :param classNameToBeDetected: (string) The class name to be filtered during the search.
+        :param score: (float) The detection confindence level.
+        
+        :return res: (RecognizedObject.mgs) It returns the object.
+        """ 
+        self.__yoloMsgType = self.returnDetectedObjects()
+        self.__detectedObjects = self.__filterObjectionDetectionMsg(self.__yoloMsgType, useFilteredObjects, classNameToBeDetected, score)
+
+        if self.__detectedObjects == []:
+            return None
+
+        return self.__returnPointedObject(easyDetection, useYolo)
+        
+
+    def detectPointingObjectWithCustomMsg(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'bag', score = 0.5):
+        self.__readDetectronSynchronizedMsgs()
+        self.__detectedObjects = self.__filterObjectionDetectionMsg(self.__yoloMsgType, useFilteredObjects, classNameToBeDetected, score)
+        
+        if self.__detectedObjects == []:
+            return None
+
+        obj = self.__returnPointedObject(easyDetection, useYolo)
+        if obj == None:
+            return None
+
+        idx = self.__detectronFindMatchBetweenMsgs(self.__detectronMsgType, obj)
+        if idx == None:
+            return None
+
+        msg = RecognizedObjectCustom()
+        msg.header = self.__detectronMsgType.header
+        msg.object.class_name = obj.class_name
+        msg.object.confidence = obj.confidence
+        msg.object.bounding_box = obj.bounding_box
+        msg.mask = self.__detectronMsgType.masks[idx]
+
+        return msg
+
+
+    def returnDetectedObjects(self, useYolo = False, useFilteredObjects = True, classNameToBeDetected = 'bag', score = 0.5):
+        """
+        It returns all the objects detected by the YOLO or the detectron. Hence, it requires one of the nodes to be running. The msg type is RecognizedObjectArrayStamped.
+        
+        :param useYolo: (bool) It tells which object detector should we subsribe to. If set to True, subscribes to YOLO otherwise uses Detectron.
+        :param classNameToBeDetected: (string) The class name to be filtered during the search.
+        :param score: (float) The detection confindence level.
+        
+        :return dObjects: (RecognizedObjectArrayStamped.mgs) It returns all objects detected.
+        """ 
+        
+        detectedObjects_topic = "/detectron2_ros/result_yolo_msg"
+        if useYolo == True:
+            detectedObjects_topic = "/object_detector/detections"
+
+        try:
+            data = rospy.wait_for_message(detectedObjects_topic, RecognizedObjectArrayStamped, timeout = self.__timeout)
+        except:
+            rospy.logerr("Object Detection Results are not being published!")
+            exit(1)
+
+        return data
+
+
+    def __returnPointedObject(self, easyDetection, useYolo):
         if easyDetection:
             self.getPointingDirection()
             return self.__findObjectSimplifiedVersion()
@@ -74,18 +153,8 @@ class Perception():
                 return self.__findClosestObjectToLine()
 
 
-    def returnDetectedObjects(self, useYolo = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
+    def __filterObjectionDetectionMsg(self, data, useFilteredObjects, classNameToBeDetected, score):
         dObjects = []
-        detectedObjects_topic = "/detectron2_ros/result_yolo_msg"
-        if useYolo == True:
-            detectedObjects_topic = "/object_detector/detections"
-
-        try:
-            data = rospy.wait_for_message(detectedObjects_topic, RecognizedObjectArrayStamped, timeout = self.__timeout)
-        except:
-            rospy.logerr("Object Detection Results are not being published!")
-            exit(1)
-
         if useFilteredObjects:
             for obj in data.objects.objects:
                 if obj.class_name == classNameToBeDetected and obj.confidence > score:
@@ -96,9 +165,58 @@ class Perception():
         
         return dObjects
 
+    
+    def __detectronFindMatchBetweenMsgs(self, detectron_msg, yolo_msg_object):
+        for idx, bb in enumerate(detectron_msg.boxes):
+            if bb.x_offset == yolo_msg_object.bounding_box.x_offset and bb.y_offset == yolo_msg_object.bounding_box.y_offset and bb.height == yolo_msg_object.bounding_box.height and bb.width == yolo_msg_object.bounding_box.width:
+                return idx
+        return None
+
+
+    def __detectronSynchronizedCallback(self, detectronMsg, detectronYoloMsg):
+        self.__detectronMsgType = detectronMsg
+        self.__yoloMsgType = detectronYoloMsg
+        self.__readDetectronMsgs = True
+    
+
+    def __readDetectronSynchronizedMsgs(self):
+        detectronMsgObjects_topic = "/detectron2_ros/result"
+        detectronYoloMsgObjects_topic = "/detectron2_ros/result_yolo_msg"
+
+        detectron_sub = message_filters.Subscriber(detectronMsgObjects_topic, Result)
+        detectron_yolo_sub = message_filters.Subscriber(detectronYoloMsgObjects_topic, RecognizedObjectArrayStamped)
+
+        ts = message_filters.TimeSynchronizer([detectron_sub, detectron_yolo_sub], 10)
+        ts.registerCallback(self.__detectronSynchronizedCallback)
+        rospy.sleep(5)
+
+        while not self.__readDetectronMsgs:
+            break
+
+        self.__readDetectronMsgs = False          
+
+    
+    def returnDetectedObjectsDetectronMsg(self):
+        detectronMsgDetectedObjects_topic = "/detectron2_ros/result"
+
+        try:
+            data = rospy.wait_for_message(detectronMsgDetectedObjects_topic, Result, timeout = self.__timeout)
+        except:
+            rospy.logerr("Could read detectron msg!")
+            exit(1)
+
+        return data
+
 
     def getObjectNames(self):
-        objs = self.returnDetectedObjects(useYolo = False, useFilteredObjects = False)
+        """
+        It returns all the objects class names detected by the YOLO or the detectron. Hence, it requires one of the nodes to be running.
+    
+        :return objs_class_names: (list) It returns a list of string with all objects class names detected.
+        """ 
+        data = self.returnDetectedObjects(useYolo = False, useFilteredObjects = False)
+        objs = self.__filterObjectionDetectionMsg(data, False, None, None)
+        
         if len(objs) == 0:
             rospy.logerr("Could not get objects!")
             return
@@ -110,6 +228,12 @@ class Perception():
 
 
     def __getImg(self, useYolo):
+        """
+        It reads an image from a specified topic.
+        
+        :param useYolo: (bool) It tells which topic should we subsribe to. If set to True, subscribes to YOLO image otherwise uses the camera image.
+        
+        """ 
         bridge = CvBridge()
         camera_topic = "/camera/color/image_raw"
         readImgMsg = Image
@@ -642,11 +766,9 @@ def main():
 
     n_percep = Perception()
     
-    obj = n_percep.getObjectNames()
-    rospy.loginfo(obj)
-    return obj
+    obj = n_percep.detectPointingObjectWithCustomMsg()
+    rospy.loginfo(obj.object)
 
-    # rospy.loginfo(n_percep.readSweaterColor())
 
 # Main function
 if __name__ == '__main__':
