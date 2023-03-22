@@ -8,8 +8,7 @@ import math
 from std_msgs.msg import String, Float32
 from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
-from darknet_ros_py.msg import RecognizedObjectArrayStamped
-from detectron2_ros.msg import Result, RecognizedObjectCustom
+from detectron2_ros.msg import Result, RecognizedObjectArrayStamped, RecognizedObjectWithMaskArrayStamped, SingleRecognizedObjectWithMask
 from perception_tests.msg import MediapipePointInfo, MediapipePointInfoArray
 from perception_tests.msg import ReidInfoArray
 from sympy import Point, Polygon, Line
@@ -58,15 +57,12 @@ class Perception():
         self.__peopleDetectionRecord = None
         
         self.__detectedObjects = []
-        self.__detectedObjectsDetectronMsg = None
-        
-        self.__detectronMsgType = None
-        self.__yoloMsgType = None
-        
+        self.__detectionMsg = None
+        self.__depthImg = None
         self.__readDetectronMsgs = False
      
 
-    def detectPointingObject(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'bag', score = 0.5):
+    def detectPointingObject(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
         """
         This action returns the object someone is pointing at. It requires the mediapipe holistic node to be running and the Detectron or YOLO nodes. The msg type is RecognizedObject.
         
@@ -79,8 +75,8 @@ class Perception():
         
         :return res: (RecognizedObject.mgs) It returns the object.
         """ 
-        self.__yoloMsgType = self.returnDetectedObjects()
-        self.__detectedObjects = self.__filterObjectionDetectionMsg(self.__yoloMsgType, useFilteredObjects, classNameToBeDetected, score)
+        self.__detectionMsg = self.returnDetectedObjects()
+        self.__detectedObjects = self.__filterObjectionDetectionMsg(self.__detectionMsg, useFilteredObjects, classNameToBeDetected, score)
 
         if self.__detectedObjects == []:
             return None
@@ -88,9 +84,15 @@ class Perception():
         return self.__returnPointedObject(easyDetection, useYolo)
         
 
-    def detectPointingObjectWithCustomMsg(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'bag', score = 0.5):
-        self.__readDetectronSynchronizedMsgs()
-        self.__detectedObjects = self.__filterObjectionDetectionMsg(self.__yoloMsgType, useFilteredObjects, classNameToBeDetected, score)
+    def detectPointingObjectWithCustomMsg(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
+        # readDetectronCustomMsg = rospy.get_param("/detectron2_ros/use_detectron_custom_msg")
+
+        # if not readDetectronCustomMsg:
+        #     rospy.logwarn("Detectron custom msg must be set to true on the detectron launch file!")
+        #     return None
+
+        self.__readSynchronizedMsgs()
+        self.__detectedObjects = self.__filterObjectionDetectionMsg(self.__detectionMsg, useFilteredObjects, classNameToBeDetected, score)
         
         if self.__detectedObjects == []:
             return None
@@ -99,18 +101,11 @@ class Perception():
         if obj == None:
             return None
 
-        idx = self.__detectronFindMatchBetweenMsgs(self.__detectronMsgType, obj)
-        if idx == None:
-            return None
+        msg = SingleRecognizedObjectWithMask()
+        msg.header = self.__detectionMsg.header
+        msg.object = obj
 
-        msg = RecognizedObjectCustom()
-        msg.header = self.__detectronMsgType.header
-        msg.object.class_name = obj.class_name
-        msg.object.confidence = obj.confidence
-        msg.object.bounding_box = obj.bounding_box
-        msg.mask = self.__detectronMsgType.masks[idx]
-
-        return msg
+        return msg, self.__depthImg
 
 
     def returnDetectedObjects(self, useYolo = False, useFilteredObjects = True, classNameToBeDetected = 'bag', score = 0.5):
@@ -165,28 +160,21 @@ class Perception():
         
         return dObjects
 
-    
-    def __detectronFindMatchBetweenMsgs(self, detectron_msg, yolo_msg_object):
-        for idx, bb in enumerate(detectron_msg.boxes):
-            if bb.x_offset == yolo_msg_object.bounding_box.x_offset and bb.y_offset == yolo_msg_object.bounding_box.y_offset and bb.height == yolo_msg_object.bounding_box.height and bb.width == yolo_msg_object.bounding_box.width:
-                return idx
-        return None
 
-
-    def __detectronSynchronizedCallback(self, detectronMsg, detectronYoloMsg):
-        self.__detectronMsgType = detectronMsg
-        self.__yoloMsgType = detectronYoloMsg
+    def __detectronSynchronizedCallback(self, detectronMsg, depthImgMsg):
+        self.__detectionMsg = detectronMsg
+        self.__depthImg = depthImgMsg
         self.__readDetectronMsgs = True
     
 
-    def __readDetectronSynchronizedMsgs(self):
+    def __readSynchronizedMsgs(self):
         detectronMsgObjects_topic = "/detectron2_ros/result"
-        detectronYoloMsgObjects_topic = "/detectron2_ros/result_yolo_msg"
+        depthImg_topic = "/camera/aligned_depth_to_color/image_raw"
 
-        detectron_sub = message_filters.Subscriber(detectronMsgObjects_topic, Result)
-        detectron_yolo_sub = message_filters.Subscriber(detectronYoloMsgObjects_topic, RecognizedObjectArrayStamped)
+        detectron_sub = message_filters.Subscriber(detectronMsgObjects_topic, RecognizedObjectWithMaskArrayStamped)
+        depth_img_sub = message_filters.Subscriber(depthImg_topic, Image)
 
-        ts = message_filters.TimeSynchronizer([detectron_sub, detectron_yolo_sub], 10)
+        ts = message_filters.TimeSynchronizer([detectron_sub, depth_img_sub], 10)
         ts.registerCallback(self.__detectronSynchronizedCallback)
         rospy.sleep(5)
 
@@ -766,8 +754,13 @@ def main():
 
     n_percep = Perception()
     
-    obj = n_percep.detectPointingObjectWithCustomMsg()
-    rospy.loginfo(obj.object)
+    obj = n_percep.detectPointingObject()
+    rospy.loginfo(obj)
+    
+    # obj, depth = n_percep.detectPointingObjectWithCustomMsg()
+    # rospy.loginfo(depth)
+
+    
 
 
 # Main function
