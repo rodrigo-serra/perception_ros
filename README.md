@@ -146,14 +146,6 @@ Both topics are published using a custom message (ReidInfoArray.msg). If the nod
 
 The API has the follwing actions:
 
-- returnDetectedObjects(useYolo = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5)
-  
-  It returns all the objects detected by the YOLO or the detectron. Hence, it requires one of the nodes to be running. The msg type is RecognizedObjectArrayStamped.
-
-  It takes four parameters as inputs. The yolo parameter tells the node to subscribe to the YOLO or to the Detectron results. 
-
-  When the useFilteredObjects input parameter is true, the node will look at objects whose class is given by the classNameToBeDetected input parameter and whose score (confidence) is above the threshold. 
-
 - detectPointingObject(useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5)
   
   This action returns the object someone is pointing at. It requires the mediapipe holistic node to be running and the Detectron or YOLO nodes. The first provides the measurements needed for the pointing direction, and the second the information regarding object detection. The msg type is RecognizedObject.
@@ -164,6 +156,30 @@ The API has the follwing actions:
   The second approach finds which object gets intercepted by the pointing line segment and returns that object. If no object is detected, it returns the one closest to the line.
   
   When the useFilteredObjects input parameter is true, the node will look at objects whose class is given by the classNameToBeDetected input parameter and whose score (confidence) is above the threshold. 
+
+
+- detectPointingObjectWithCustomMsg(easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5)
+  
+  This action returns the object someone is pointing at + the corresponding depth img. It requires the mediapipe holistic node to be running and the Detectron node. The msg type is SingleRecognizedObjectWithMask.
+
+  It takes four parameters as inputs.
+  
+  The easyDetection stands for two types of detection. The first, the simple approach, focuses on the arm direction to determine the pointing direction. Then it selects the object farthest left or farthest right accordingly. This approach works under the assumption that the useFilteredObjects is also set to true and that we are choosing between two objects. 
+  The second approach finds which object gets intercepted by the pointing line segment and returns that object. If no object is detected, it returns the one closest to the line.
+  
+  When the useFilteredObjects input parameter is true, the node will look at objects whose class is given by the classNameToBeDetected input parameter and whose score (confidence) is above the threshold. 
+
+  Note that this action takes a bit longer to return an output since it waits for the synchronization of the depth and detectron topics.
+
+
+- returnDetectedObjects(useYolo = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5)
+  
+  It returns all the objects detected by the YOLO or the detectron. Hence, it requires one of the nodes to be running. The msg type is RecognizedObjectArrayStamped.
+
+  It takes four parameters as inputs. The yolo parameter tells the node to subscribe to the YOLO or to the Detectron results. 
+
+  When the useFilteredObjects input parameter is true, the node will look at objects whose class is given by the classNameToBeDetected input parameter and whose score (confidence) is above the threshold. 
+
 
 - getObjectNames()
 
@@ -203,7 +219,7 @@ The API has the follwing actions:
 
   It returns 2D coordinates (x, y) for each img left hand landmark. Note that it will also return a z coordinate which is -1 and score (visibility) also -1, thus ought to be ignored. The msg type is MediapipePointInfoArray. It requires the mediapipe holistic node to be running.
 
-
+<!--
 - getHipLength()
 
   It returns the hip length. The msg type is Float32. It requires the mediapipe holistic node to be running.
@@ -224,6 +240,11 @@ The API has the follwing actions:
 
   It returns the left arm length. The msg type is Float32. It requires the mediapipe holistic node to be running.
 
+- readSweaterColor()
+
+  It returns the estimated color of the person's sweater/t-shirt.
+-->
+
 - getPeopleDetection()
 
   It returns an array with all the persons detected in the current frame. The msg type is ReidInfoArray. It requires the reid node to be running.
@@ -231,10 +252,6 @@ The API has the follwing actions:
 - getPeopleDetectionRecord()
 
   It returns an array with all the persons detected in the past. The msg type is ReidInfoArray. It requires the reid node to be running.
-
-- readSweaterColor()
-
-  It returns the estimated color of the person's sweater/t-shirt.
 
 - startReid()
 

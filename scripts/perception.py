@@ -84,12 +84,24 @@ class Perception():
         return self.__returnPointedObject(easyDetection, useYolo)
         
 
-    def detectPointingObjectWithCustomMsg(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
-        # readDetectronCustomMsg = rospy.get_param("/detectron2_ros/use_detectron_custom_msg")
+    def detectPointingObjectWithCustomMsg(self, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
+        """
+        This action returns the object someone is pointing at + the corresponding depth img. It requires the mediapipe holistic node to be running and the Detectron node. The msg type is SingleRecognizedObjectWithMask.
+        
+        :param easyDetection: (bool) If set to true, it focuses on the arm direction to determine the pointing direction. Then it selects the object farthest left or farthest right accordingly. 
+                                    This approach works under the assumption that the useFilteredObjects is also set to true and that we are choosing between two objects. 
+                                    If set to false, it finds which object gets intercepted by the pointing line segment and returns that object. If no object is detected, it returns the one closest to the line.
+        :param classNameToBeDetected: (string) The class name to be filtered during the search.
+        :param score: (float) The detection confindence level.
+        
+        :return res: (SingleRecognizedObjectWithMask.mgs + Image.msg) It returns the object and the corresponding depth image.
+        """ 
+        useYolo = False
+        readDetectronCustomMsg = rospy.get_param("/detectron2_ros/use_detectron_custom_msg")
 
-        # if not readDetectronCustomMsg:
-        #     rospy.logwarn("Detectron custom msg must be set to true on the detectron launch file!")
-        #     return None
+        if not readDetectronCustomMsg:
+            rospy.logwarn("Detectron custom msg must be set to true on the detectron launch file!")
+            return None
 
         self.__readSynchronizedMsgs()
         self.__detectedObjects = self.__filterObjectionDetectionMsg(self.__detectionMsg, useFilteredObjects, classNameToBeDetected, score)
@@ -133,6 +145,16 @@ class Perception():
 
 
     def __returnPointedObject(self, easyDetection, useYolo):
+        """
+        It returns the object pointed at.
+        
+        :param easyDetection: (bool) If set to true, it focuses on the arm direction to determine the pointing direction. Then it selects the object farthest left or farthest right accordingly. 
+                                    This approach works under the assumption that the useFilteredObjects is also set to true and that we are choosing between two objects. 
+                                    If set to false, it finds which object gets intercepted by the pointing line segment and returns that object. If no object is detected, it returns the one closest to the line.
+        :param useYolo: (bool) In this case it tells which img topic should we subscribe to.
+        
+        :return object: It returns the object pointed at. The msg type can be either RecognizedObject.msg or RecognizedObjectWithMask.msg
+        """ 
         if easyDetection:
             self.getPointingDirection()
             return self.__findObjectSimplifiedVersion()
