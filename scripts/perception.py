@@ -139,7 +139,7 @@ class Perception():
 
         # if not readDetectronCustomMsg:
         #     rospy.logwarn("Detectron custom msg must be set to true on the detectron launch file!")
-        #     return None
+        #     return None, None
 
         self.__readSynchronizedMsgs()
         self.__detectedObjects = self.__filterObjectionDetectionMsg(self.__detectionMsg, useFilteredObjects, classNameToBeDetected, score)
