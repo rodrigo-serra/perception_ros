@@ -60,7 +60,45 @@ class Perception():
         self.__detectionMsg = None
         self.__depthImg = None
         self.__readDetectronMsgs = False
-     
+
+
+    def is_door_open(self, timeout=3.0):
+        """
+        description: assuming that there is a door in front of the robot and using the robot laser scanners detect if its open or closed
+        input: None
+        output (return): A boolean with the status of the door, true: door is open, false: door is closed
+        NOTE: raises exceptions in some cases to prevent mistaking with boolean door open/close
+        """
+
+        self.__door_detector_pub = rospy.Publisher('/door_detector_node/event_in', String, queue_size=5)
+        rospy.delay(0.25)
+        sub_door = rospy.Subscriber('/door_detector_node/event_out', String, self.__callback_door_open)
+        rospy.delay(0.25)
+
+        if self.__door_detector_pub.get_num_connections() == 0:
+            rospy.logwarn('There is no subscriber for door detector topic. Did you launch the door detector?')
+
+        self.__door_open = None
+        self.__door_detector_pub.publish(String(data='e_start'))
+
+        # wait for response for 3 seconds
+        wait_time = time.time() + timeout
+        while self.__door_open is None:
+            if time.time() > wait_time:
+                rospy.logerr("Timeout while checking door")
+                return None
+
+        sub_door.unregister()
+
+        return self.__door_open
+
+
+    def __callback_door_open(self, msg):
+        if msg.data == 'e_open':
+            self.__door_open = True
+        elif msg.data == 'e_closed':
+            self.__door_open = False
+
 
     def detectPointingObject(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
         """
@@ -97,21 +135,21 @@ class Perception():
         :return res: (SingleRecognizedObjectWithMask.mgs + Image.msg) It returns the object and the corresponding depth image.
         """ 
         useYolo = False
-        readDetectronCustomMsg = rospy.get_param("/detectron2_ros/use_detectron_custom_msg")
+        # readDetectronCustomMsg = rospy.get_param("/detectron2_ros/use_detectron_custom_msg")
 
-        if not readDetectronCustomMsg:
-            rospy.logwarn("Detectron custom msg must be set to true on the detectron launch file!")
-            return None
+        # if not readDetectronCustomMsg:
+        #     rospy.logwarn("Detectron custom msg must be set to true on the detectron launch file!")
+        #     return None
 
         self.__readSynchronizedMsgs()
         self.__detectedObjects = self.__filterObjectionDetectionMsg(self.__detectionMsg, useFilteredObjects, classNameToBeDetected, score)
         
         if self.__detectedObjects == []:
-            return None
+            return None, None
 
         obj = self.__returnPointedObject(easyDetection, useYolo)
         if obj == None:
-            return None
+            return None, None
 
         msg = SingleRecognizedObjectWithMask()
         msg.header = self.__detectionMsg.header
@@ -171,6 +209,16 @@ class Perception():
 
 
     def __filterObjectionDetectionMsg(self, data, useFilteredObjects, classNameToBeDetected, score):
+        """
+        It returns the list of detected objects.
+        
+        :param easyDetection: (bool) If set to true, it focuses on the arm direction to determine the pointing direction. Then it selects the object farthest left or farthest right accordingly. 
+                                    This approach works under the assumption that the useFilteredObjects is also set to true and that we are choosing between two objects. 
+                                    If set to false, it finds which object gets intercepted by the pointing line segment and returns that object. If no object is detected, it returns the one closest to the line.
+        :param useYolo: (bool) In this case it tells which img topic should we subscribe to.
+        
+        :return object: It returns the object pointed at. The msg type can be either RecognizedObject.msg or RecognizedObjectWithMask.msg
+        """ 
         dObjects = []
         if useFilteredObjects:
             for obj in data.objects.objects:
@@ -245,11 +293,13 @@ class Perception():
         
         """ 
         bridge = CvBridge()
-        camera_topic = "/camera/color/image_raw"
-        readImgMsg = Image
+
         if useYolo == True:
             camera_topic = "/object_detector/detection_image/compressed"
             readImgMsg = CompressedImage
+        else:
+            camera_topic = "/camera/color/image_raw"
+            readImgMsg = Image
 
         try:
             data = rospy.wait_for_message(camera_topic, readImgMsg, timeout = self.__timeout)
@@ -530,8 +580,6 @@ class Perception():
             return self.__peopleDetectionRecord
         except:
             rospy.logerr("Could not get People Detection Record!")
-
-
     
     def readSweaterColor(self):
         sweaterColor_topic = "/perception/mediapipe_holistic/sweater_color"
@@ -776,11 +824,11 @@ def main():
 
     n_percep = Perception()
     
-    obj = n_percep.detectPointingObject()
-    rospy.loginfo(obj)
+    # obj = n_percep.detectPointingObject()
+    # rospy.loginfo(obj)
     
-    # obj, depth = n_percep.detectPointingObjectWithCustomMsg()
-    # rospy.loginfo(depth)
+    obj, depth = n_percep.detectPointingObjectWithCustomMsg()
+    rospy.loginfo(obj)
 
     
 
