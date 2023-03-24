@@ -114,6 +114,9 @@ class Perception():
         :return res: (RecognizedObject.mgs) It returns the object.
         """ 
         self.__detectionMsg = self.returnDetectedObjects()
+        if self.__detectionMsg is None:
+            return None
+
         self.__detectedObjects = self.__filterObjectionDetectionMsg(self.__detectionMsg, useFilteredObjects, classNameToBeDetected, score)
 
         if self.__detectedObjects == []:
@@ -135,20 +138,24 @@ class Perception():
         :return res: (SingleRecognizedObjectWithMask.mgs + Image.msg) It returns the object and the corresponding depth image.
         """ 
         useYolo = False
-        # readDetectronCustomMsg = rospy.get_param("/detectron2_ros/use_detectron_custom_msg")
-
-        # if not readDetectronCustomMsg:
+        # try:
+        #     readDetectronCustomMsg = rospy.get_param("/detectron2_ros/use_detectron_custom_msg")
+        # except:
         #     rospy.logwarn("Detectron custom msg must be set to true on the detectron launch file!")
         #     return None, None
 
         self.__readSynchronizedMsgs()
+        if self.__detectionMsg is None:
+            rospy.logwarn("Could not read detectron detection and image depth topics!")
+            return None, None
+
         self.__detectedObjects = self.__filterObjectionDetectionMsg(self.__detectionMsg, useFilteredObjects, classNameToBeDetected, score)
         
         if self.__detectedObjects == []:
             return None, None
 
         obj = self.__returnPointedObject(easyDetection, useYolo)
-        if obj == None:
+        if obj is None:
             return None, None
 
         msg = SingleRecognizedObjectWithMask()
@@ -177,7 +184,7 @@ class Perception():
             data = rospy.wait_for_message(detectedObjects_topic, RecognizedObjectArrayStamped, timeout = self.__timeout)
         except:
             rospy.logerr("Object Detection Results are not being published!")
-            exit(1)
+            return None
 
         return data
 
@@ -198,6 +205,9 @@ class Perception():
             return self.__findObjectSimplifiedVersion()
         else:
             self.__getImg(useYolo)
+            if self.__img is None:
+                return None
+
             self.getPointingSlope()
             self.getPointingIntercept()
             
@@ -261,7 +271,7 @@ class Perception():
             data = rospy.wait_for_message(detectronMsgDetectedObjects_topic, Result, timeout = self.__timeout)
         except:
             rospy.logerr("Could read detectron msg!")
-            exit(1)
+            return None
 
         return data
 
@@ -273,6 +283,9 @@ class Perception():
         :return objs_class_names: (list) It returns a list of string with all objects class names detected.
         """ 
         data = self.returnDetectedObjects(useYolo = False, useFilteredObjects = False)
+        if data is None:
+            return None
+
         objs = self.__filterObjectionDetectionMsg(data, False, None, None)
         
         if len(objs) == 0:
@@ -305,6 +318,7 @@ class Perception():
             data = rospy.wait_for_message(camera_topic, readImgMsg, timeout = self.__timeout)
         except:
             rospy.logerr("Could not read img from: " + camera_topic)
+            return
 
         try:
             if readImgMsg == CompressedImage:
