@@ -29,6 +29,10 @@ class Reid:
 
         # Variable Initialization 
         self.directory = rospack.get_path('perception_tests') + '/images/'
+        if not os.path.exists(self.directory):
+            rospy.logwarn("Adding images directory")
+            os.mkdir(self.directory)
+            
         self.models_directory = rospack.get_path('perception_tests') + '/models/'
         self.rate = rospy.Rate(10)
         self.img = None
@@ -148,17 +152,14 @@ class Reid:
             if self.img is not None:
                 if self.ctr:
                     face_locations, face_names = faceRecognition(self.img, self.known_face_encodings, self.known_face_names)
-                    
+                    res = None
                     if face_names != []:
                         if self.extractFaceBoundaryOnly:
                             res = self.lookIntoDetectPeopleHolistic(face_locations, face_names)
                         else:
                             res = self.lookIntoDetectPeople(face_locations, face_names)
 
-                        # rospy.loginfo(res)
                         self.reid_pub.publish(res)
-                    else:
-                        rospy.loginfo("No detections!")
 
                     if self.known_face_names != []:
                         self.reidRecord_pub.publish(self.detection_record)
@@ -166,8 +167,12 @@ class Reid:
                     self.ctr = False
                     
                 if self.draw:
-                    frame = drawRectangleAroundFace(self.img, res, self.extractFaceBoundaryOnly ,self.cropOffset)
-                    cv2.imshow("RealSense", frame)
+                    if res is not None:
+                        frame = drawRectangleAroundFace(self.img, res, self.extractFaceBoundaryOnly ,self.cropOffset)
+                        cv2.imshow("RealSense", frame)
+                    else:
+                        cv2.imshow("RealSense", self.img)
+
                     cv2.waitKey(1)
                     
             
