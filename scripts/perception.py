@@ -6,7 +6,8 @@ import numpy as np
 import math
 
 from std_msgs.msg import String, Float32
-from sensor_msgs.msg import Image, CompressedImage
+from sensor_msgs.msg import Image, CompressedImage, CameraInfo
+from geometry_msgs.msg import Pose, PoseStamped
 from cv_bridge import CvBridge, CvBridgeError
 from detectron2_ros.msg import Result, RecognizedObjectArrayStamped, RecognizedObjectWithMaskArrayStamped, SingleRecognizedObjectWithMask
 from perception_tests.msg import MediapipePointInfo, MediapipePointInfoArray
@@ -15,18 +16,19 @@ from sympy import Point, Polygon, Line
 
 import message_filters
 
+import tiago_object_localization.tiago_object_localization_library_helper as obj_pose_module
+
 # from mbot_perception_msgs.msg import TrackedObject3DList, TrackedObject3D, RecognizedObject3DList, RecognizedObject3D
 # from mbot_perception_msgs.srv import DeleteObject3D, DeleteObject3DRequest
 
-class Singleton(type):
-    _instances = {}
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
+class Perception:
+    _instance = None
 
-class Perception():
-    __metaclass__ = Singleton
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
         # self.tracked_objects=None
         # self.subscriber = rospy.Subscriber("/bayes_objects_tracker/tracked_objects", TrackedObject3DList, self.__trackCallback)
@@ -71,9 +73,9 @@ class Perception():
         """
 
         self.__door_detector_pub = rospy.Publisher('/door_detector_node/event_in', String, queue_size=5)
-        rospy.delay(0.25)
+        rospy.sleep(0.25)
         sub_door = rospy.Subscriber('/door_detector_node/event_out', String, self.__callback_door_open)
-        rospy.delay(0.25)
+        rospy.sleep(0.25)
 
         if self.__door_detector_pub.get_num_connections() == 0:
             rospy.logwarn('There is no subscriber for door detector topic. Did you launch the door detector?')
@@ -82,9 +84,9 @@ class Perception():
         self.__door_detector_pub.publish(String(data='e_start'))
 
         # wait for response for 3 seconds
-        wait_time = time.time() + timeout
+        wait_time = rospy.Time.now() + rospy.Duration(timeout)
         while self.__door_open is None:
-            if time.time() > wait_time:
+            if rospy.Time.now() > wait_time:
                 rospy.logerr("Timeout while checking door")
                 return None
 
@@ -100,7 +102,7 @@ class Perception():
             self.__door_open = False
 
 
-    def detectPointingObject(self, useYolo = False, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
+    def detectPointingObject(self, classNameToBeDetected, useYolo = False, easyDetection = False, useFilteredObjects = True, score = 0.5):
         """
         This action returns the object someone is pointing at. It requires the mediapipe holistic node to be running and the Detectron or YOLO nodes. The msg type is RecognizedObject.
         
@@ -113,6 +115,15 @@ class Perception():
         
         :return res: (RecognizedObject.mgs) It returns the object.
         """ 
+        if useFilteredObjects == True
+            if type(classNameToBeDetected) != list:
+                rospy.logwarn("Input argument classNameToBeDetected must be a list of classes!")
+                return None
+            
+            if len(classNameToBeDetected) == 0:
+                rospy.logwarn("Input argument classNameToBeDetected cannot be an empty list!")
+                return None
+                
         self.__detectionMsg = self.returnDetectedObjects()
         if self.__detectionMsg is None:
             return None
@@ -125,7 +136,7 @@ class Perception():
         return self.__returnPointedObject(easyDetection, useYolo)
         
 
-    def detectPointingObjectWithCustomMsg(self, easyDetection = False, useFilteredObjects = True, classNameToBeDetected = 'backpack', score = 0.5):
+    def detectPointingObjectWithCustomMsg(self, classNameToBeDetected, easyDetection = False, useFilteredObjects = True, score = 0.5):
         """
         This action returns the object someone is pointing at + the corresponding depth img. It requires the mediapipe holistic node to be running and the Detectron node. The msg type is SingleRecognizedObjectWithMask.
         
@@ -136,13 +147,22 @@ class Perception():
         :param score: (float) The detection confindence level.
         
         :return res: (SingleRecognizedObjectWithMask.mgs + Image.msg) It returns the object and the corresponding depth image.
-        """ 
+        """
+        if useFilteredObjects == True
+            if type(classNameToBeDetected) != list:
+                rospy.logwarn("Input argument classNameToBeDetected must be a list of classes!")
+                return None, None
+            
+            if len(classNameToBeDetected) == 0:
+                rospy.logwarn("Input argument classNameToBeDetected cannot be an empty list!")
+                return None, None
+
         useYolo = False
-        # try:
-        #     readDetectronCustomMsg = rospy.get_param("/detectron2_ros/use_detectron_custom_msg")
-        # except:
-        #     rospy.logwarn("Detectron custom msg must be set to true on the detectron launch file!")
-        #     return None, None
+        try:
+            readDetectronCustomMsg = rospy.get_param("/detectron2_ros/use_detectron_custom_msg")
+        except:
+            rospy.logwarn("Detectron custom msg must be set to true on the detectron launch file!")
+            return None, None
 
         self.__readSynchronizedMsgs()
         if self.__detectionMsg is None:
@@ -155,7 +175,7 @@ class Perception():
             return None, None
 
         obj = self.__returnPointedObject(easyDetection, useYolo)
-        if obj is None:
+        if obj == None:
             return None, None
 
         msg = SingleRecognizedObjectWithMask()
@@ -232,7 +252,7 @@ class Perception():
         dObjects = []
         if useFilteredObjects:
             for obj in data.objects.objects:
-                if obj.class_name == classNameToBeDetected and obj.confidence > score:
+                if obj.class_name in classNameToBeDetected and obj.confidence > score:
                     dObjects.append(obj)
         else:
             for obj in data.objects.objects:    
@@ -675,7 +695,56 @@ class Perception():
     def stopDetectronTopics(self):    
         self.___eventIn("e_stop_topics", "detectron")
 
+    def get_object_pose(self, pointing_object, depth_frame=None):
+        if pointing_object == None:
+            rospy.logerr('Inputed pointing_object is None, please input a valid object.')
+            return None
+        if not depth_frame:
+            try:
+                depth_frame = rospy.wait_for_message('/camera/aligned_depth_to_color/image_raw', Image, timeout = self.__timeout)
+            except:
+                rospy.logerr("Could not get depth frame!")
+        
+        CameraIntrinsics = rospy.wait_for_message('/camera/aligned_depth_to_color/camera_info', CameraInfo, timeout = self.__timeout)
 
+        #camera intrinsics initialization
+        fx_d = CameraIntrinsics.K[0]
+        fy_d = CameraIntrinsics.K[4]
+        cx_d = CameraIntrinsics.K[2]
+        cy_d = CameraIntrinsics.K[5]
+        depthScale = 1000
+        
+        #converting msg to image - getting mask and depth image
+        mask = obj_pose_module.convert_to_cv_image(pointing_object.object.mask)
+        image_depth = obj_pose_module.convert_to_cv_image(depth_frame)
+
+        #getting bounding box limits
+        x_offset = pointing_object.object.bounding_box.x_offset
+        width = pointing_object.object.bounding_box.width
+        y_offset = pointing_object.object.bounding_box.y_offset
+        height = pointing_object.object.bounding_box.height
+
+        #get pose
+        half_cube_dimension = 5 #sets dimension of cube from which the depth mean is got - cube dimension is set to (2*half_cube_dimension + 1)
+        x, y, z = obj_pose_module.get_center_mask(x_offset, width, y_offset, height, image_depth, mask, fx_d, fy_d, cx_d, cy_d, depthScale, half_cube_dimension)
+        
+        if x != None:
+            object_pose = PoseStamped()
+            object_pose.header = depth_frame.header
+            object_pose.pose.position.x = x
+            object_pose.pose.position.y = y
+            object_pose.pose.position.z = z
+            object_pose.pose.orientation.x = 0
+            object_pose.pose.orientation.y = 0
+            object_pose.pose.orientation.z = 0
+            object_pose.pose.orientation.w = 1
+        else:
+            return None
+
+        return object_pose
+
+    def test(self):
+        print("HEYYY!!")
     # def __trackCallback(self,data):
     #     self.tracked_objects = data
 
@@ -831,22 +900,21 @@ class Perception():
 #     print(object_frame)
 
 
-def main():
-    node_name = "perception_action"
-    rospy.init_node(node_name, anonymous=True)
-    rospy.loginfo("%s node created" % node_name)
+# def main():
+#     node_name = "perception_action"
+#     rospy.init_node(node_name, anonymous=True)
+#     rospy.loginfo("%s node created" % node_name)
 
-    n_percep = Perception()
+#     n_percep = Perception()
+#     obj = n_percep.detectPointingObject()
+#     rospy.loginfo(obj)
     
-    # obj = n_percep.detectPointingObject()
-    # rospy.loginfo(obj)
-    
-    obj, depth = n_percep.detectPointingObjectWithCustomMsg()
-    rospy.loginfo(obj)
+#     # obj, depth = n_percep.detectPointingObjectWithCustomMsg()
+#     # rospy.loginfo(depth)
 
     
 
 
 # Main function
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
