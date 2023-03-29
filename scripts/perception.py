@@ -16,7 +16,7 @@ from sympy import Point, Polygon, Line
 
 import message_filters
 
-import tiago_object_localization.tiago_object_localization_library_helper as obj_pose_module
+# import tiago_object_localization.tiago_object_localization_library_helper as obj_pose_module
 
 # from mbot_perception_msgs.msg import TrackedObject3DList, TrackedObject3D, RecognizedObject3DList, RecognizedObject3D
 # from mbot_perception_msgs.srv import DeleteObject3D, DeleteObject3DRequest
@@ -115,7 +115,7 @@ class Perception:
         
         :return res: (RecognizedObject.mgs) It returns the object.
         """ 
-        if useFilteredObjects == True
+        if useFilteredObjects == True:
             if type(classNameToBeDetected) != list:
                 rospy.logwarn("Input argument classNameToBeDetected must be a list of classes!")
                 return None
@@ -148,7 +148,7 @@ class Perception:
         
         :return res: (SingleRecognizedObjectWithMask.mgs + Image.msg) It returns the object and the corresponding depth image.
         """
-        if useFilteredObjects == True
+        if useFilteredObjects == True:
             if type(classNameToBeDetected) != list:
                 rospy.logwarn("Input argument classNameToBeDetected must be a list of classes!")
                 return None, None
@@ -695,56 +695,56 @@ class Perception:
     def stopDetectronTopics(self):    
         self.___eventIn("e_stop_topics", "detectron")
 
-    def get_object_pose(self, pointing_object, depth_frame=None):
-        if pointing_object == None:
-            rospy.logerr('Inputed pointing_object is None, please input a valid object.')
-            return None
-        if not depth_frame:
-            try:
-                depth_frame = rospy.wait_for_message('/camera/aligned_depth_to_color/image_raw', Image, timeout = self.__timeout)
-            except:
-                rospy.logerr("Could not get depth frame!")
+    # def get_object_pose(self, pointing_object, depth_frame=None):
+    #     if pointing_object == None:
+    #         rospy.logerr('Inputed pointing_object is None, please input a valid object.')
+    #         return None
+    #     if not depth_frame:
+    #         try:
+    #             depth_frame = rospy.wait_for_message('/camera/aligned_depth_to_color/image_raw', Image, timeout = self.__timeout)
+    #         except:
+    #             rospy.logerr("Could not get depth frame!")
         
-        CameraIntrinsics = rospy.wait_for_message('/camera/aligned_depth_to_color/camera_info', CameraInfo, timeout = self.__timeout)
+    #     CameraIntrinsics = rospy.wait_for_message('/camera/aligned_depth_to_color/camera_info', CameraInfo, timeout = self.__timeout)
 
-        #camera intrinsics initialization
-        fx_d = CameraIntrinsics.K[0]
-        fy_d = CameraIntrinsics.K[4]
-        cx_d = CameraIntrinsics.K[2]
-        cy_d = CameraIntrinsics.K[5]
-        depthScale = 1000
+    #     #camera intrinsics initialization
+    #     fx_d = CameraIntrinsics.K[0]
+    #     fy_d = CameraIntrinsics.K[4]
+    #     cx_d = CameraIntrinsics.K[2]
+    #     cy_d = CameraIntrinsics.K[5]
+    #     depthScale = 1000
         
-        #converting msg to image - getting mask and depth image
-        mask = obj_pose_module.convert_to_cv_image(pointing_object.object.mask)
-        image_depth = obj_pose_module.convert_to_cv_image(depth_frame)
+    #     #converting msg to image - getting mask and depth image
+    #     mask = obj_pose_module.convert_to_cv_image(pointing_object.object.mask)
+    #     image_depth = obj_pose_module.convert_to_cv_image(depth_frame)
 
-        #getting bounding box limits
-        x_offset = pointing_object.object.bounding_box.x_offset
-        width = pointing_object.object.bounding_box.width
-        y_offset = pointing_object.object.bounding_box.y_offset
-        height = pointing_object.object.bounding_box.height
+    #     #getting bounding box limits
+    #     x_offset = pointing_object.object.bounding_box.x_offset
+    #     width = pointing_object.object.bounding_box.width
+    #     y_offset = pointing_object.object.bounding_box.y_offset
+    #     height = pointing_object.object.bounding_box.height
 
-        #get pose
-        half_cube_dimension = 5 #sets dimension of cube from which the depth mean is got - cube dimension is set to (2*half_cube_dimension + 1)
-        x, y, z = obj_pose_module.get_center_mask(x_offset, width, y_offset, height, image_depth, mask, fx_d, fy_d, cx_d, cy_d, depthScale, half_cube_dimension)
+    #     #get pose
+    #     half_cube_dimension = 5 #sets dimension of cube from which the depth mean is got - cube dimension is set to (2*half_cube_dimension + 1)
+    #     x, y, z = obj_pose_module.get_center_mask(x_offset, width, y_offset, height, image_depth, mask, fx_d, fy_d, cx_d, cy_d, depthScale, half_cube_dimension)
         
-        if x != None:
-            object_pose = PoseStamped()
-            object_pose.header = depth_frame.header
-            object_pose.pose.position.x = x
-            object_pose.pose.position.y = y
-            object_pose.pose.position.z = z
-            object_pose.pose.orientation.x = 0
-            object_pose.pose.orientation.y = 0
-            object_pose.pose.orientation.z = 0
-            object_pose.pose.orientation.w = 1
-        else:
-            return None
+    #     if x != None:
+    #         object_pose = PoseStamped()
+    #         object_pose.header = depth_frame.header
+    #         object_pose.pose.position.x = x
+    #         object_pose.pose.position.y = y
+    #         object_pose.pose.position.z = z
+    #         object_pose.pose.orientation.x = 0
+    #         object_pose.pose.orientation.y = 0
+    #         object_pose.pose.orientation.z = 0
+    #         object_pose.pose.orientation.w = 1
+    #     else:
+    #         return None
 
-        return object_pose
+    #     return object_pose
 
-    def test(self):
-        print("HEYYY!!")
+    # def test(self):
+    #     print("HEYYY!!")
     # def __trackCallback(self,data):
     #     self.tracked_objects = data
 
