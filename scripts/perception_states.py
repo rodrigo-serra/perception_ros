@@ -2,14 +2,15 @@
 
 import rospy
 import smach
-import smach_ros
-import threading
-import random
+import std_msgs
 
 # perception.py script
 from perception import *
-
 perception_object = Perception() 
+
+from perception_states_db import SemanticMapping, Person
+# Semantic Mapping Global Variable Initialization
+semanticMap = SemanticMapping()
 
 
 class CurrentPeopleDetection(smach.State):
@@ -143,51 +144,183 @@ class PrintMsg(smach.State):
     outcomes: 'success' or 'failure'
     '''
 
-    def __init__(self, msg):
+    def __init__(self, msg, useInput = False):
         smach.State.__init__(self, outcomes=['success', 'failure'], input_keys=['in_data'])
         self.msg = msg
+        self.useInput = useInput
 
     def execute(self,userdata):
         try:
-            rospy.loginfo(self.msg)
-            return "success"
+            if self.useInput:
+                rospy.loginfo(userdata.in_data)
+            else:
+                rospy.loginfo(self.msg)
+            return 'success'
         except:
-            return "failure"
+            return 'failure'
 
 
-# POINTING DIRECTION SMACH
-# if __name__ == '__main__':
-#     rospy.init_node('my_smach_state_machine')
-#     # Create a SMACH state machine
-#     sm = smach.StateMachine(outcomes=['success', 'failure'])
-#     # Open the container
-#     with sm:
-#         #Add states to the container
-#         smach.StateMachine.add('TIAGO_INFO_INTRO', PrintMsg("Please point to one of the bags"), transitions={'success': 'POINTING_DIRECTION_PERSON', 'failure': 'TIAGO_INFO_INTRO'})
+class FindName(smach.State):
+    '''
+    description: it reads a msg
+    input: 
+    outcomes: 'success' or 'failure'
+    '''
+
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['success', 'failure'], output_keys=['out_data'])
+
+    def execute(self,userdata):
+        try:
+            firstName = input('Enter your name: ')
+        except:
+            userdata.out_data = ""
+            return 'failure'
+
+        userdata.out_data = "Nice to meet you " + firstName
         
-#         smach.StateMachine.add('POINTING_DIRECTION_PERSON', DetectPointingDirection(), transitions={'left': 'TIAGO_SAY_LEFT', 'right': 'TIAGO_SAY_RIGHT', 'failure': 'TIAGO_SAY_FAILURE'})
-
-#         smach.StateMachine.add('TIAGO_SAY_LEFT', PrintMsg("You are pointing to the bag at the left"), transitions={'success': 'success', 'failure': 'TIAGO_SAY_FAILURE'})
-#         smach.StateMachine.add('TIAGO_SAY_RIGHT', PrintMsg("You are pointing to the bag at the right"), transitions={'success': 'success', 'failure': 'TIAGO_SAY_FAILURE'})
-#         smach.StateMachine.add('TIAGO_SAY_FAILURE', PrintMsg("Could not get pointing direction. Let's do it again"), transitions={'success': 'TIAGO_INFO_INTRO', 'failure': 'TIAGO_SAY_FAILURE'})
-
-#     # Execute SMACH plan
-#     outcome = sm.execute()
-
-
-# PEOPLE DETECTION SMACH
-if __name__ == '__main__':
-    rospy.init_node('my_smach_state_machine')
-    # Create a SMACH state machine
-    sm = smach.StateMachine(outcomes=['success', 'failure'])
-    # Open the container
-    with sm:
-        #Add states to the container
-        smach.StateMachine.add('TIAGO_INFO_INTRO', PrintMsg("Hello there"), transitions={'success': 'DETECT_PERSONS', 'failure': 'TIAGO_INFO_INTRO'})
+        # Add Person to the Semantic Mapping for the first time
+        p = Person()
+        p.name = firstName
+        p.party_id = "guest#" + str(len(semanticMap.persons) + 1)
+        semanticMap.persons.append(p)
         
-        smach.StateMachine.add('DETECT_PERSONS', CurrentPeopleDetection(), transitions={'success': 'TIAGO_SAY_FINAL_MSG', 'failure': 'DETECT_PERSONS'})
+        return 'success'
 
-        smach.StateMachine.add('TIAGO_SAY_FINAL_MSG', PrintMsg("I successfuly identified people"), transitions={'success': 'success', 'failure': 'TIAGO_SAY_FINAL_MSG'})
 
-    # Execute SMACH plan
-    outcome = sm.execute()
+class FindFavouriteDrink(smach.State):
+    '''
+    description: it reads a msg
+    input: 
+    outcomes: 'success' or 'failure'
+    '''
+
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['success', 'failure'], output_keys=['out_data'])
+
+    def execute(self,userdata):
+        try:
+            favDrink = input('Enter your favourite drink: ')
+        except:
+            userdata.out_data = ""
+            return 'failure'
+
+        userdata.out_data = "Your favourite drink is " + favDrink
+        
+        # Add favDrink 
+        semanticMap.persons[len(semanticMap.persons) - 1].favorite_drink = favDrink
+        
+        return 'success'
+
+
+class SeeingPeople(smach.State):
+    '''
+    description: See if reid is detecting the person
+    input: 
+    outcomes: 'success' or 'failure'
+    '''
+
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['success', 'failure'])
+
+    def execute(self,userdata):
+        try:
+            detection = perception_object.getPeopleDetection()
+        except:
+            return 'failure'
+
+        if detection == None:
+            return 'failure'
+        
+        # rospy.logwarn(str(detection))
+        return 'success'
+
+
+class SavePersonInfo(smach.State):
+    '''
+    description: Add Person info to the global database
+    input: 
+    outcomes: 'success' or 'failure'
+    '''
+
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['success', 'failure'])
+
+    def execute(self,userdata):
+        try:
+            detection = perception_object.getClosestPersonToCamera()
+        except:
+            return 'failure'
+
+        if detection == None:
+            return 'failure'
+        
+        if semanticMap.persons[len(semanticMap.persons) - 1].reid_id == "Unknown":
+            return 'failure'
+        
+        semanticMap.persons[len(semanticMap.persons) - 1].reid_id = detection.id
+        semanticMap.persons[len(semanticMap.persons) - 1].age_range = detection.ageRange
+        semanticMap.persons[len(semanticMap.persons) - 1].gender = detection.gender
+
+        rospy.logwarn(str(semanticMap.persons[len(semanticMap.persons) - 1].name))
+        rospy.logwarn(str(semanticMap.persons[len(semanticMap.persons) - 1].favorite_drink))
+        rospy.logwarn(str(semanticMap.persons[len(semanticMap.persons) - 1].reid_id))
+        rospy.logwarn(str(semanticMap.persons[len(semanticMap.persons) - 1].party_id))
+        rospy.logwarn(str(semanticMap.persons[len(semanticMap.persons) - 1].age_range))
+        rospy.logwarn(str(semanticMap.persons[len(semanticMap.persons) - 1].gender))
+
+        return 'success'
+
+
+
+
+#################################################################################################
+class send_event(smach.State):
+    '''
+    This state will take a list of event as input. Which are pair of name and value to publish.
+    Output of this node is to publish the value in the provided topic name.
+    '''
+
+    def __init__(self, event_list):
+        smach.State.__init__(self, outcomes=['success'])
+        self.event_publisher_list = []
+        self.expected_return_values_ = []
+        self.event_names_ = []
+        self.possible_event_values = ['e_start', 'e_stop', 'e_trigger', 'e_forget', 'e_take_photo']
+        for event in event_list:
+            if len(event) != 2:
+                rospy.logerr('The event list is malformed!!')
+                exit()
+            elif event[1].lower() not in self.possible_event_values:
+                rospy.logerr('Improper event value!!')
+                exit()
+
+            event_name = event[0]
+            self.event_names_.append(event_name)
+            self.expected_return_values_.append(event[1].lower())
+            self.event_publisher_list.append(rospy.Publisher(event_name, std_msgs.msg.String, queue_size=1))
+
+        # give some time for the publishers to register in the network
+        rospy.sleep(0.1)
+
+    def execute(self, userdata):
+        for index in range(len(self.event_publisher_list)):
+            self.event_publisher_list[index].publish(self.expected_return_values_[index])
+            rospy.logdebug('Published the event_name: %s event_value: %s', self.event_names_[index],
+                           self.expected_return_values_[index])
+        return 'success'
+
+
+class Sleep(smach.State):
+    '''
+    This state just sleeps for some time
+    '''
+    def __init__(self, time_to_sleep):
+        smach.State.__init__(self, outcomes=['success'])
+        self.time_to_sleep = time_to_sleep
+
+    def execute(self, userdata):
+        rospy.loginfo('sleeping for ' + str(self.time_to_sleep) + ' seconds' )
+        rospy.sleep(self.time_to_sleep)
+        return 'success'
+

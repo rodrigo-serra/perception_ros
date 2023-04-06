@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
-import rospy
+import rospy, rospkg
 import cv2
 import numpy as np
 import math
-
+import shutil, os, gdown
+from io import BytesIO
 from std_msgs.msg import String, Float32
 from sensor_msgs.msg import Image, CompressedImage, CameraInfo
 from geometry_msgs.msg import Pose, PoseStamped
@@ -101,6 +102,52 @@ class Perception:
         elif msg.data == 'e_closed':
             self.__door_open = False
 
+    
+    def downloadDetectronModel(self, option):
+        rospack = rospkg.RosPack()
+        detectronDir = rospack.get_path('detectron2_ros')
+        detectronModelsDir = detectronDir + "/model"
+        modelZipfile = detectronDir + "/custom_model.zip"
+
+        # Delete model folder
+        if os.path.exists(detectronModelsDir):
+            shutil.rmtree(detectronModelsDir, ignore_errors=True)
+
+        if option == 1:
+            # Download Fashion Model
+            pass
+        elif option == 2:
+            # Download Bags/BagsHandles Model
+            pass
+        elif option == 3:
+            # Download DoorKnobs Model
+            # url = "https://drive.google.com/file/d/1l83vq4ybTUpuDwXrSMRqQJzrjfvfZoKh/view?usp=sharing"
+            url = "https://ulisboa-my.sharepoint.com/:u:/g/personal/ist181272_tecnico_ulisboa_pt/ES2K9nbG4EVOvUG4RuNV010BQQhWVS4gwkt7VJmCsGCBqA?e=hVAaXd"
+        else:
+            rospy.logwarn("Option is not available!")
+            return
+
+        # Download model under zip format
+        rospy.logwarn("Downloading Model zip file!")
+        
+        
+        # try:
+        #     gdown.download(url, modelZipfile, quiet=False,fuzzy=True)
+        # except:
+        #     rospy.logwarn("Could not download the model!")
+            # return
+        
+        rospy.sleep(3)
+        
+        # Unzip file
+        # rospy.logwarn("Unzipping Model!")
+        # try:
+        #     shutil.unpack_archive(modelZipfile , detectronDir)
+        # except:
+        #     rospy.logwarn("Could not unzip the model")
+        
+        # os.remove(modelZipfile)
+
 
     def detectPointingObject(self, classNameToBeDetected, useYolo = False, easyDetection = False, useFilteredObjects = True, score = 0.5):
         """
@@ -129,7 +176,7 @@ class Perception:
             return None
 
         self.__detectedObjects = self.__filterObjectionDetectionMsg(self.__detectionMsg, useFilteredObjects, classNameToBeDetected, score)
-
+        
         if self.__detectedObjects == []:
             return None
 
@@ -257,7 +304,7 @@ class Perception:
         else:
             for obj in data.objects.objects:    
                 dObjects.append(obj)
-        
+
         return dObjects
 
 
@@ -614,6 +661,25 @@ class Perception:
             return self.__peopleDetectionRecord
         except:
             rospy.logerr("Could not get People Detection Record!")
+
+
+    def getClosestPersonToCamera(self):
+        detections = self.getPeopleDetection()
+        if detections is None:
+            rospy.logwarn("Currently not detecting anyone")
+            return None
+
+        person_idx = -1
+        current_area = -1
+
+        for idx, d in enumerate(detections):
+            bounding_box_area = (d.right - d.left) * (d.bottom - d.top)
+            if bounding_box_area > current_area:
+                current_area = bounding_box_area
+                person_idx = idx
+
+        return detections[person_idx]        
+            
     
     def readSweaterColor(self):
         sweaterColor_topic = "/perception/mediapipe_holistic/sweater_color"
@@ -743,12 +809,8 @@ class Perception:
 
     #     return object_pose
 
-    # def test(self):
-    #     print("HEYYY!!")
     # def __trackCallback(self,data):
     #     self.tracked_objects = data
-
-
 
     # def get_objects_tracker(self, confidence):
     #     # get object message
@@ -891,30 +953,16 @@ class Perception:
     #
     #     return object_dict, object_frame
 
-
-# if __name__ == '__main__':
-#     rospy.init_node('perception_action', anonymous=True)
-#     perception = Perception()
-#     objects, object_frame = perception.get_objects_tracker(confidence=0.5)
-#     print(objects)
-#     print(object_frame)
-
-
-# def main():
-#     node_name = "perception_action"
-#     rospy.init_node(node_name, anonymous=True)
-#     rospy.loginfo("%s node created" % node_name)
-
-#     n_percep = Perception()
-#     obj = n_percep.detectPointingObject()
-#     rospy.loginfo(obj)
-    
-#     # obj, depth = n_percep.detectPointingObjectWithCustomMsg()
-#     # rospy.loginfo(depth)
-
-    
-
-
 # Main function
-# if __name__ == '__main__':
-#     main()
+if __name__ == '__main__':
+    node_name = "perception_action"
+    rospy.init_node(node_name, anonymous=True)
+    rospy.loginfo("%s node created" % node_name)
+
+    n_percep = Perception()
+    # obj, depth = n_percep.detectPointingObjectWithCustomMsg(['suitcase', 'handbag', 'bag', 'backpack'])
+    # rospy.loginfo(obj.object.class_name)
+    # rospy.loginfo(obj.object.bounding_box)
+    
+    n_percep.downloadDetectronModel(3)
+    rospy.loginfo("Done")
