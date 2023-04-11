@@ -5,3 +5,4 @@ mediapipe
 face_recognition
 pandas
 Pillow
+msal

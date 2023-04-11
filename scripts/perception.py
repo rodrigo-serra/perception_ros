@@ -4,8 +4,6 @@ import rospy, rospkg
 import cv2
 import numpy as np
 import math
-import shutil, os, gdown
-from io import BytesIO
 from std_msgs.msg import String, Float32
 from sensor_msgs.msg import Image, CompressedImage, CameraInfo
 from geometry_msgs.msg import Pose, PoseStamped
@@ -16,6 +14,10 @@ from perception_tests.msg import ReidInfoArray
 from sympy import Point, Polygon, Line
 
 import message_filters
+
+from datetime import datetime
+import shutil, os, msal, requests, webbrowser, json
+
 
 # import tiago_object_localization.tiago_object_localization_library_helper as obj_pose_module
 
@@ -64,6 +66,11 @@ class Perception:
         self.__depthImg = None
         self.__readDetectronMsgs = False
 
+        # One Drive Info
+        self.__GRAPH_API_ENDPOINT = 'https://graph.microsoft.com/v1.0'
+        self.__APP_ID = 'b72234f1-2a53-48ce-9468-1b970fd282d0'
+        self.__SCOPES = ['Files.Read']
+
 
     def is_door_open(self, timeout=3.0):
         """
@@ -102,27 +109,66 @@ class Perception:
         elif msg.data == 'e_closed':
             self.__door_open = False
 
+
+    def __oneDriveGenerateAccessToken(self):
+        # Save Session Token as a token file
+        access_token_cache = msal.SerializableTokenCache()
+
+        # read the token file
+        if os.path.exists('ms_graph_api_token.json'):
+            access_token_cache.deserialize(open("ms_graph_api_token.json", "r").read())
+            token_detail = json.load(open('ms_graph_api_token.json',))
+            token_detail_key = list(token_detail['AccessToken'].keys())[0]
+            token_expiration = datetime.fromtimestamp(int(token_detail['AccessToken'][token_detail_key]['expires_on']))
+            if datetime.now() > token_expiration:
+                os.remove('ms_graph_api_token.json')
+                access_token_cache = msal.SerializableTokenCache()
+
+        # assign a SerializableTokenCache object to the client instance
+        client = msal.PublicClientApplication(client_id=self.__APP_ID, token_cache=access_token_cache)
+        accounts = client.get_accounts()
+        
+        if accounts:
+            # load the session
+            token_response = client.acquire_token_silent(self.__SCOPES, accounts[0])
+        else:
+            # authetnicate your accoutn as usual
+            flow = client.initiate_device_flow(scopes=self.__SCOPES)
+            print('user_code: ' + flow['user_code'])
+            webbrowser.open('https://microsoft.com/devicelogin')
+            token_response = client.acquire_token_by_device_flow(flow)
+
+        with open('ms_graph_api_token.json', 'w') as _f:
+            _f.write(access_token_cache.serialize())
+
+        return token_response
     
+
     def downloadDetectronModel(self, option):
         rospack = rospkg.RosPack()
         detectronDir = rospack.get_path('detectron2_ros')
         detectronModelsDir = detectronDir + "/model"
-        modelZipfile = detectronDir + "/custom_model.zip"
 
         # Delete model folder
         if os.path.exists(detectronModelsDir):
             shutil.rmtree(detectronModelsDir, ignore_errors=True)
+
+        # OneDrive access token
+        access_token = self.__oneDriveGenerateAccessToken()
+        headers = {
+            'Authorization': 'Bearer' + access_token['access_token']
+        }
 
         if option == 1:
             # Download Fashion Model
             pass
         elif option == 2:
             # Download Bags/BagsHandles Model
-            pass
+            path_to_file = 'socrob/perception/detectron/models/bags/'
+            file_name = 'trainingInfo.txt'
         elif option == 3:
             # Download DoorKnobs Model
-            # url = "https://drive.google.com/file/d/1l83vq4ybTUpuDwXrSMRqQJzrjfvfZoKh/view?usp=sharing"
-            url = "https://ulisboa-my.sharepoint.com/:u:/g/personal/ist181272_tecnico_ulisboa_pt/ES2K9nbG4EVOvUG4RuNV010BQQhWVS4gwkt7VJmCsGCBqA?e=hVAaXd"
+            pass
         else:
             rospy.logwarn("Option is not available!")
             return
@@ -130,15 +176,18 @@ class Perception:
         # Download model under zip format
         rospy.logwarn("Downloading Model zip file!")
         
+        try:
+            response_file_content = requests.get(self.__GRAPH_API_ENDPOINT + '/me/drive/root:/' + path_to_file + file_name +':/content', headers=headers)
+        except:
+            rospy.logwarn("Could not download the model" + file_name + " from OneDrive!")
+            return
         
-        # try:
-        #     gdown.download(url, modelZipfile, quiet=False,fuzzy=True)
-        # except:
-        #     rospy.logwarn("Could not download the model!")
-            # return
-        
+        with open(os.path.join(detectronDir, file_name), 'wb') as _f:
+            _f.write(response_file_content.content)
+
         rospy.sleep(3)
         
+        modelZipfile = detectronDir + "/" + file_name
         # Unzip file
         # rospy.logwarn("Unzipping Model!")
         # try:
@@ -147,6 +196,8 @@ class Perception:
         #     rospy.logwarn("Could not unzip the model")
         
         # os.remove(modelZipfile)
+
+
 
 
     def detectPointingObject(self, classNameToBeDetected, useYolo = False, easyDetection = False, useFilteredObjects = True, score = 0.5):
@@ -964,5 +1015,5 @@ if __name__ == '__main__':
     # rospy.loginfo(obj.object.class_name)
     # rospy.loginfo(obj.object.bounding_box)
     
-    n_percep.downloadDetectronModel(3)
+    n_percep.downloadDetectronModel(2)
     rospy.loginfo("Done")
